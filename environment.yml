@@ -1,0 +1,16 @@
+# If you only wish to "use" synthterrain with conda, you can just
+# > conda env create -n synthterrain -f environment.yml
+#
+# If you want to develop synthterrain, you should do this:
+# > conda create -n synthterrain
+# > conda activate synthterrain
+# > conda env update --file environment_dev.yml
+# > conda env update --file environment.yml
+# If either of the "update" steps takes forever, consider using "mamba" instead of "conda".
+#
+dependencies:
+  - matplotlib
+  - numpy
+  - pandas
+  - scipy
+  - shapely

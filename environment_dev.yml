@@ -1,0 +1,18 @@
+# Please read comments in environment.yml
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - bump2version
+  - cookiecutter
+  - flake8
+  - ipympl
+  - jupyterlab
+  - pytest
+  - pytest-cov
+  - sphinx
+  - sphinxcontrib
+  - sphinxcontrib-apidoc
+  - sphinxcontrib-autoprogram
+  - tox
+  - twine
