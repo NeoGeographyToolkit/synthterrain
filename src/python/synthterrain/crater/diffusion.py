@@ -21,6 +21,7 @@ import math
 import statistics
 
 import numpy as np
+from numpy.polynomial import Polynomial
 import pandas as pd
 
 from synthterrain.crater.profile import FT_Crater
@@ -238,14 +239,63 @@ def diffuse_d_over_D_by_bin(
         "craters)"
     )
 
+    if start_dd_mean == "Stopar fit":
+        # This is a 3-degree fit to the data from Stopar et al. (2017)
+        # The resulting function, stopar_dD() will return d/D ratios when
+        # given a diameter in meters.
+        stopar_poly = Polynomial([
+            1.23447427e-01, 1.49135061e-04, -6.16681361e-08, 7.08449143e-12
+        ])
+
+        def start_dd(diameter):
+            if diameter < 850:
+                return stopar_poly(diameter)
+            else:
+                return 0.2
+
+        def start_std(diameter):
+            if diameter < 10:
+                return start_dd_std + 0.01
+            else:
+                return start_dd_std
+
+    elif start_dd_mean == "Stopar step":
+        # Stopar et al. (2017) define a set of graduate d/D categories
+        # defined down to 40 m.  This creates two extrapolated categories:
+        def start_dd(diameter):
+            # The last two elements are extrapolated
+            d_lower_bounds = (400, 200, 100, 40, 10, 0)
+            dds = (0.21, 0.17, 0.15, 0.13, 0.11, 0.10)
+            for d, dd in zip(d_lower_bounds, dds):
+                if diameter > d:
+                    return dd
+            else:
+                raise ValueError("Diameter was less than zero.")
+
+        def start_std(diameter):
+            # if diameter < 10:
+            #     return start_dd_std + 0.01
+            # else:
+            return start_dd_std
+
+    else:
+        def start_dd(diameter):
+            return start_dd_mean
+
+        def start_std(diameter):
+            return start_dd_std
+
     df["diameter_bin"] = pd.cut(df["diameter"], bins=bin_edges)
     df["d/D"] = 0.0
+
+    # Need to convert this loop to multiprocessing.
     for i, (interval, count) in enumerate(
         df["diameter_bin"].value_counts(sort=False).items()
     ):
         logger.info(
             f"Processing bin {i}/{num}, interval: {interval}, count: {count}"
         )
+
         if count == 0:
             continue
         elif 0 < count <= 3:
@@ -258,8 +308,8 @@ def diffuse_d_over_D_by_bin(
                     row["age"],
                     domain_size=domain_size,
                     start_dd_adjust=True,
-                    start_dd_mean=start_dd_mean,
-                    start_dd_std=start_dd_std,
+                    start_dd_mean=start_dd(row["diameter"]),
+                    start_dd_std=start_dd(row["diameter"]),
                 ),
                 axis=1
             )
@@ -267,25 +317,28 @@ def diffuse_d_over_D_by_bin(
             # Run three representative models for this "bin"
             oldest_age = df.loc[df["diameter_bin"] == interval, "age"].max()
 
+            start = start_dd(interval.mid)
+            std = start_std(interval.mid)
+
             middle_dds = diffuse_d_over_D(
                 interval.mid,
                 oldest_age,
                 domain_size=domain_size,
-                start_dd_adjust=start_dd_mean,
+                start_dd_adjust=start,
                 return_steps=True
             )
             high_dds = diffuse_d_over_D(
                 interval.mid,
                 oldest_age,
                 domain_size=domain_size,
-                start_dd_adjust=start_dd_mean + start_dd_std,
+                start_dd_adjust=start + std,
                 return_steps=True
             )
             low_dds = diffuse_d_over_D(
                 interval.mid,
                 oldest_age,
                 domain_size=domain_size,
-                start_dd_adjust=start_dd_mean - start_dd_std,
+                start_dd_adjust=start - std,
                 return_steps=True
             )
 

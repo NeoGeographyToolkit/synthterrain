@@ -66,7 +66,7 @@ def synthesize(
 
     # Generate depth to diameter ratio
     if by_bin:
-        df = diffuse_d_over_D_by_bin(df)
+        df = diffuse_d_over_D_by_bin(df, start_dd_mean="Stopar fit")
     else:
         df["d/D"] = df.apply(
             lambda crater: diffuse_d_over_D(crater["diameter"], crater["age"]),
