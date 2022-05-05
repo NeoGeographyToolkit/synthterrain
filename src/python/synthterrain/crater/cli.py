@@ -9,16 +9,11 @@
 # The AUTHORS file and the LICENSE file are at the
 # top level of this library.
 
-import argparse
 import logging
 from pathlib import Path
-import random
 import sys
-import textwrap
 
-import numpy as np
-import pandas as pd
-from shapely.geometry import Point, Polygon, box
+from shapely.geometry import box
 
 import synthterrain.crater as crater
 from synthterrain.crater import functions
@@ -130,8 +125,13 @@ def main():
 
     crater_dist = getattr(functions, args.csfd)(a=args.mind, b=args.maxd)
 
-    df = crater.synthesize(crater_dist, polygon=poly,
-                           by_bin=args.run_individual)
+    df = crater.synthesize(
+        crater_dist,
+        polygon=poly,
+        by_bin=args.run_individual,
+        min_d=args.mind,
+        max_d=args.maxd
+    )
 
     if args.plot:
         crater.plot(df)
