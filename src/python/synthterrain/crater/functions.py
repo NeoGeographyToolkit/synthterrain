@@ -18,7 +18,6 @@ from numbers import Number
 
 import numpy as np
 from numpy.polynomial import Polynomial
-from scipy import interpolate
 from scipy.stats import rv_continuous
 
 logger = logging.getLogger(__name__)

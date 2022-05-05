@@ -14,7 +14,6 @@ import math
 from pathlib import Path
 import random
 
-import matplotlib
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Circle
 import matplotlib.pyplot as plt
