@@ -34,6 +34,8 @@ def synthesize(
     polygon: Polygon,
     production_fn=None,
     by_bin=True,
+    min_d=None,
+    max_d=None,
 ):
     """Return a pandas DataFrame which contains craters and their properties
        synthesized from the input parameters.
@@ -53,7 +55,15 @@ def synthesize(
     logger.info(f"Production function is {production_fn.__class__}")
 
     # Get craters
-    diameters = crater_dist.rvs(area=(polygon.area))
+    if min_d is None and max_d is None:
+        diameters = crater_dist.rvs(area=polygon.area)
+    elif min_d is not None and max_d is not None:
+        diameters = generate_diameters(crater_dist, polygon.area, min_d, max_d)
+    else:
+        raise ValueError(
+            f"One of min_d, max_d ({min_d}, {max_d}) was None, they must "
+            "either both be None or both have a value."
+        )
     logger.info(f"In {polygon.area} m^2, generated {len(diameters)} craters.")
 
     # Generate ages and start working with a dataframe.
@@ -107,6 +117,24 @@ def random_points(poly: Polygon, num_points: int):
 
     # return points
     return x_list, y_list
+
+
+def generate_diameters(crater_dist, area, min, max):
+    """
+    Returns a numpy array with diameters selected from the *crater_dist*
+    function based on the *area*, and no craters smaller than *min* or
+    larger than *max* will be returned.
+    """
+    size = crater_dist.count(area, min) - crater_dist.count(area, max)
+    diameters = list()
+
+    while len(diameters) != size:
+        d = crater_dist.rvs(size=(size - len(diameters)))
+        diameters += d[
+            np.logical_and(min <= d, d <= max)
+        ].tolist()
+
+    return np.array(diameters)
 
 
 def generate_ages(diameters, pd_csfd, eq_csfd):
