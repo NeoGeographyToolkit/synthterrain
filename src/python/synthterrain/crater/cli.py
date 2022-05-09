@@ -43,11 +43,11 @@ def arg_parser():
         "--bbox",
         nargs=4,
         type=float,
-        default=[0, 0, 1000, 1000],
-        metavar=('MINX', 'MINY', 'MAXX', 'MAXY'),
+        default=[0, 1000, 1000, 0],
+        metavar=('MINX', 'MAXY', 'MAXX', 'MINY'),
         help="The coordinates of the bounding box, expressed in meters, to "
-             "evaluate in minx, miny, maxx, maxy order (which is llx, "
-             "lly, urx, ury). "
+             "evaluate in min-x, max-y, max-x, min-y order (which is ulx, "
+             "uly, lrx, lry, the GDAL pattern). "
              "Default: %(default)s"
     )
     parser.add_argument(
@@ -121,7 +121,9 @@ def main():
     #     return
 
     # This could more generically take an arbitrary polygon
-    poly = box(*args.bbox)
+    # bbox argument takes: 'MINX', 'MAXY', 'MAXX', 'MINY'
+    # the box() function takes: (minx, miny, maxx, maxy)
+    poly = box(args.bbox[0], args.bbox[3], args.bbox[2], args.bbox[1])
 
     crater_dist = getattr(functions, args.csfd)(a=args.mind, b=args.maxd)
 
