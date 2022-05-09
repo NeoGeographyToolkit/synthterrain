@@ -18,7 +18,6 @@ from numbers import Number
 
 import numpy as np
 from numpy.polynomial import Polynomial
-from scipy import interpolate
 from scipy.stats import rv_continuous
 
 logger = logging.getLogger(__name__)
@@ -128,6 +127,20 @@ class Crater_rv_continuous(ABC, rv_continuous):
         """
         return np.ones_like(d) - (self.csfd(d) / self.csfd(self.a))
 
+    def count(self, area, diameter=None) -> int:
+        """Returns the number of craters based on the *area* provided
+        in square meters.  If *diameter* is None (the default), the
+        calculation will be based on the cumulative number of craters
+        at the minimum support, a, of this distribution.  Otherwise, the
+        returned size will be the value of this distribution's CSFD
+        at *diameter* multiplied by the *area*.
+        """
+        if diameter is None:
+            d = self.a
+        else:
+            d = diameter
+        return int(self.csfd(d) * area)
+
     def rvs(self, *args, **kwargs):
         """Overrides the parent rvs() function by adding an *area*
            parameter, all other arguments are identical.
@@ -147,7 +160,7 @@ class Crater_rv_continuous(ABC, rv_continuous):
            it by the desired area results in the desired number of craters.
         """
         if "area" in kwargs:
-            kwargs["size"] = int(self.csfd(self.a) * kwargs["area"])
+            kwargs["size"] = self.count(kwargs["area"])
             del kwargs["area"]
 
         return super().rvs(*args, **kwargs)
