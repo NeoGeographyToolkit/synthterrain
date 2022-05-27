@@ -85,6 +85,7 @@ def diffuse_d_over_D(
     start_dd_mean=0.15,
     start_dd_std=0.02,
     return_steps=False,
+    return_surface=False,
     crater_cls=FT_Crater
 ):
     """
@@ -111,6 +112,12 @@ def diffuse_d_over_D(
     returned, a list of depth to diameter ratios is returned, one for each
     time step in the diffusion process, with the last list item being identical
     to what would be returned when *return_steps* is False (the default).
+
+    If *return_surface* is True, instead of a single object returned, a tuple
+    will be returned, where the nature of the zeroth element is based on
+    *return_steps* and the final element is the numpy array of elevations
+    which represents the final diffused surface relative to a starting flat
+    surface of zero.
 
     If a different crater profile is desired, pass a subclass (not an instance)
     of crater.profile.Crater to *crater_cls*, otherwise defaults to
@@ -187,9 +194,14 @@ def diffuse_d_over_D(
 
     # Final depth to diameter:
     if return_steps:
-        return dd_for_each_step
+        dd = dd_for_each_step
     else:
-        return dd_for_each_step[-1]
+        dd = dd_for_each_step[-1]
+
+    if return_surface:
+        return dd, u
+    else:
+        return dd
 
 
 def diffuse_d_over_D_by_bin(
