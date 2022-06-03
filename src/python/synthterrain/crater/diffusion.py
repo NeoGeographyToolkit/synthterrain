@@ -58,23 +58,38 @@ def diffusion_length_scale(diameter: float, domain_size: int) -> float:
     return math.pow(diameter * 2 / domain_size, 2) / 4
 
 
-def kappa_diffusivity(diameter: float, kappa0=5.5e-6, kappa_corr=0.9) -> float:
+def kappa_diffusivity(diameter: float) -> float:
     """
     Returns the diffusivity for a crater with a *diameter* in meters.  The
     returned diffusivity is in units of m^2 per year.
 
     This calculation is based on Fassett and Thomson (2014,
-    https://doi.org/10.1002/2014JE004698). The *kappa0* value is the
-    diffusivity at 1 km, and *kappa_corr* is the power law exponent for
-    correcting this to small sizes.
-
-    Fassett and Thomson (2015,
-    https://ui.adsabs.harvard.edu/abs/2015LPI....46.1120F/abstract)
-    indicates *kappa0* is 5.5e-6 m^2 / year (the default).
+    https://doi.org/10.1002/2014JE004698) and Fassett and Thomson (2015,
+    https://ui.adsabs.harvard.edu/abs/2015LPI....46.1120F/abstract),
+    but modeling done by Caleb Fassett since then has influenced this
+    function.
     """
     # Fassett and Thomson (2014) don't actually define this functional
     # form, this was provided to me by Caleb.
-    return kappa0 * math.pow(diameter / 1000, kappa_corr)
+    # The *kappa0* value is the diffusivity at 1 km, and *kappa_corr* is the
+    # power law exponent for correcting this to small sizes.
+    # Fassett and Thomson (2015) indicates *kappa0* is 5.5e-6 m^2 / year
+    # (the default).
+    # kappa0=5.5e-6, kappa_corr=0.9
+    # return kappa0 * math.pow(diameter / 1000, kappa_corr)
+
+    # The logic below was replaced the above simple logic on
+    # 2022-05-22 by Caleb.
+    if diameter <= 11.2:
+        k = 0.0155  # m2/myr
+    elif diameter < 45:
+        k = 1.55e-3 * math.pow(diameter, 0.974)
+    elif diameter < 125:
+        k = 1.23e-3 * math.pow(diameter, 0.8386)
+    else:  # UNCONSTRAINED BY EQUILIBRIUM ABOVE 125m!!!!!!!
+        k = 5.2e-3 * math.pow(diameter, 1.3)
+
+    return k / 1.0e6  # m2/yr
 
 
 def diffuse_d_over_D(
