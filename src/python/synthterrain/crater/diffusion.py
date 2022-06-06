@@ -24,7 +24,7 @@ import numpy as np
 from numpy.polynomial import Polynomial
 import pandas as pd
 
-from synthterrain.crater.profile import FT_Crater
+from synthterrain.crater.profile import FT_Crater, stopar_fresh_dd
 
 
 logger = logging.getLogger(__name__)
@@ -289,15 +289,16 @@ def diffuse_d_over_D_by_bin(
     elif start_dd_mean == "Stopar step":
         # Stopar et al. (2017) define a set of graduate d/D categories
         # defined down to 40 m.  This creates two extrapolated categories:
-        def start_dd(diameter):
-            # The last two elements are extrapolated
-            d_lower_bounds = (400, 200, 100, 40, 10, 0)
-            dds = (0.21, 0.17, 0.15, 0.13, 0.11, 0.10)
-            for d, dd in zip(d_lower_bounds, dds):
-                if diameter > d:
-                    return dd
-            else:
-                raise ValueError("Diameter was less than zero.")
+        # def start_dd(diameter):
+        #     # The last two elements are extrapolated
+        #     d_lower_bounds = (400, 200, 100, 40, 10, 0)
+        #     dds = (0.21, 0.17, 0.15, 0.13, 0.11, 0.10)
+        #     for d, dd in zip(d_lower_bounds, dds):
+        #         if diameter > d:
+        #             return dd
+        #     else:
+        #         raise ValueError("Diameter was less than zero.")
+        start_dd = stopar_fresh_dd
 
         def start_std(diameter):
             # if diameter < 10:

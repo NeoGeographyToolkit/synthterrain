@@ -112,6 +112,80 @@ class FT_Crater(Crater):
         return out_arr
 
 
+class FTmod_Crater(Crater):
+    """
+    This crater profile is based on Fassett and Thomson
+    (2014, https://doi.org/10.1002/2014JE004698), equation 4, but modified
+    in 2022 by Caleb Fassett (pers. comm).
+
+    An optional *depth* parameter can be given to the constructor which
+    specifies the initial depth of the crater.  If no *depth* is given,
+    the "Stopar step" value for fresh craters of the given diameter is used.
+
+    The modifications to the Fassett and Thomson (2014) shape are at the rim
+    and at the floor.  Rather than being a sharp transition from crater
+    interior to crater exterior, there is now a "flat" rim from 0.98 relative
+    crater diameter to 1.02.
+
+    The specification of the "depth" parameter will set the level of the flat
+    floor in the middle of the crater.  In practice, this means that for
+    smaller craters, the flat floor will have a larger relative radius than
+    larger craters, because the d/D ratios for smaller craters are smaller,
+    thus shallower, thus larger (relative) flat floors.
+    """
+
+    def __init__(
+        self,
+        diameter,
+        depth=None
+    ):
+        super().__init__(diameter)
+        if depth is None:
+            self.depth = stopar_fresh_dd(self.diameter) * self.diameter
+        else:
+            self.depth = depth
+
+    def profile(self, r):
+        """Returns a numpy array of elevation values based in the input numpy
+           array of radius fraction values, such that a radius fraction value
+           of 1 is at the rim, less than that interior to the crater, etc.
+
+           A ValueError will be thrown if any values in r are < 0.
+        """
+
+        if not isinstance(r, np.ndarray):
+            r = np.ndarray(r)
+
+        out_arr = np.zeros_like(r)
+
+        if np.any(r < 0):
+            raise ValueError(
+                "The radius fraction value can't be less than zero."
+            )
+
+        inner_idx = np.logical_and(0 <= r, r <= 0.98)
+        rim_idx = np.logical_and(0.98 < r, r <= 1.02)
+        outer_idx = np.logical_and(1.02 < r, r <= 1.5)
+
+        inner_poly = Polynomial(
+            [-0.228809953, 0.227533882, 0.083116795, -0.039499407]
+        )
+        outer_poly = Polynomial(
+            [0.188253307, -0.187050452, 0.01844746, 0.01505647]
+        )
+
+        rim_hoverd = 0.036822095
+
+        out_arr[inner_idx] = inner_poly(r[inner_idx])
+        out_arr[rim_idx] = rim_hoverd
+        out_arr[outer_idx] = outer_poly(r[outer_idx])
+
+        floor = rim_hoverd - (self.depth / self.diameter)
+        out_arr[out_arr < floor] = floor
+
+        return out_arr * self.diameter
+
+
 class MPD_Crater(Crater):
     """A crater whose profile is defined by functions described in
        Martin, Parkes, and Dunstan (2014,
@@ -272,3 +346,18 @@ class MPD_Crater(Crater):
     def fc(x: float, emin: float, tr=0, pr=0):
         return ((emin + tr - pr) * x) + (2 * (pr - tr)) - emin
 
+
+def stopar_fresh_dd(diameter):
+    """
+    Returns a depth/Diameter ratio based on the set of graduated d/D
+    categories in Stopar et al. (2017), defined down to 40 m.  This
+    function also adds two extrapolated categories.
+    """
+    # The last two elements are extrapolated
+    d_lower_bounds = (400, 200, 100, 40, 10, 0)
+    dds = (0.21, 0.17, 0.15, 0.13, 0.11, 0.10)
+    for d, dd in zip(d_lower_bounds, dds):
+        if diameter >= d:
+            return dd
+    else:
+        raise ValueError(f"Diameter was less than zero: {diameter}.")
