@@ -489,10 +489,59 @@ class Grun(Coef_Distribution):
         kwargs["a"] = a
         kwargs["b"] = b
 
-        # These two arrays are from Caleb Fassett, pers. comm., calculated
-        # in the following manner.
+        # This method for using Grun et al. (1985) to "simulate" a crater
+        # distribution is from Caleb Fassett, pers. comm.
+        diameters, fluxes = self.parameters()
+
+        # The Coef_Distribution polynomial needs diameters
+        # in kilometers, so divide by 1000.  And fluxes need
+        # to be in /km^2 /Gyr, so multiply by a million.
+        p = Polynomial.fit(
+            np.log10(diameters / 1000), np.log10(fluxes * 1e6), 11
+        )
+
+        super().__init__(
+            poly=p,
+            **kwargs
+        )
+
+    @staticmethod
+    def parameters():
+        """
+        This function returns a set of diameters and fluxes which are used
+        by the Grun() class.  This function (and its comments) exists to
+        demonstrate the math for how the values were arrived at.
+        """
 
         # Grun et al. equation A2 describes fluxes in terms of mass.
+
+        # We'll generate "craters" based on masses from 10^-18 to the upper
+        # valid limit of 10^2 grams for these equations.
+        masses = np.logspace(-18, 2, 21)  # in grams
+        # masses = np.logspace(-18, 0, 19)  # in grams
+        # print(masses)
+
+        # Constants indicated below equation A2 from Grun et al. (1985)
+        # First element here is arbitrarily zero so that indexes match
+        # with printed A2 equation for easier comparison.
+        c = (0, 4e+29, 1.5e+44, 1.1e-2, 2.2e+3, 15.)
+        gamma = (0, 1.85, 3.7, -0.52, 0.306, -4.38)
+
+        def a_elem(mass, i):
+            return c[i] * np.power(mass, gamma[i])
+
+        def a2(mass):
+            # Returns flux in m^-2 s^-1
+            return (
+                np.power(a_elem(mass, 1) + a_elem(mass, 2) + c[3], gamma[3]) +
+                np.power(a_elem(mass, 4) + c[5], gamma[5])
+            )
+
+        # fluxes = a2(masses) * 86400.0 * 365.25  # convert to m^-2 yr^-1
+        # fluxes = a2(masses) * 86400.0 * 365.25 * 1e6  # convert to km^-2 yr^-1
+        fluxes = a2(masses) * 86400.0 * 365.25 * 1e9  # convert to m^-2 Gyr^-1
+        # fluxes = a2(masses) * 1e6 * 86400.0 * 365.25 * 1e9  # to /km^2 /Gyr
+
         # To convert mass, m, of a particle to diameter of crater, we first
         # assume a density, rho, of 2.5 g/cm^-3, and calculate a particle radius
         # by assuming spherical particles:
@@ -501,48 +550,74 @@ class Grun(Coef_Distribution):
         #
         #   r = [ (3 * m) / (4 * pi * rho) ] ^(1/3)
         #
-        # Housen & Holsapple (2011) scaling is then applied to these radii
-        # to generate crater diameters.
-        #
-        # With masses from 10^-18 to 10^6 grams, and calcuating a diameter
-        # at every mass decade, we get these 24 crater diameters in meters:
-        diameters = np.array([
-            6.91E-07, 1.49E-06, 3.21E-06, 6.91E-06, 1.49E-05,
-            3.21E-05, 6.91E-05, 0.000148787, 0.000320552, 0.000690607,
-            0.001487869, 0.003205516, 0.006906074, 0.014878687, 0.03205516,
-            0.069060751, 0.148786877, 0.32055161, 0.690607508, 1.487868771,
-            3.205516094, 6.906075072, 14.87868771, 32.05516094
-        ]) / 1000
-        # The Coef_Distribution polynomial needs diameters
-        # in kilometers, so divide by 1000.
+        rho = 2.5e+6  # g/m^-3
+        radii = np.power(
+            (3 * masses) / (4 * math.pi * rho),
+            1 / 3
+        )  # should be radii in meters.
 
-        # Now we can use Grun et al. equation A2 to calculate the flux in
-        # number m^-2 s^-1.  Those values can be converted to units of
-        # number km^-2 yr^-1.
+        # Now these "impactor" radii need to be converted to crater size via
+        # Housen & Holsapple (2011) scaling.
+        diameters = Grun.hoho_diameter(radii, masses / 1000, rho / 1000)
 
-        # The Grun mass range maxes out at 100 g, which only gets us to about
-        # three meters in diameter, but we can extrapolate the Neukum
-        # production function to match up with the fluxes calculated in this
-        # manner.
+        # The above largest diameter only gets you 2.5 m diameter craters.  And
+        # Neukum doesn't start until 10 m, so we're going to pick out some
+        # diameters from Neukum to add to these so that the polynomial in Grun()
+        # spans the space.
+        npf = NPF(10, 100)
+        n_diams = np.array([10, 15, 20, 30, 50, 100])
+        n_fluxes = npf.csfd(n_diams)
 
-        # These are in /km^2 /yr, so to convert to /km^2 /Gyr
-        fluxes = 1e9 * np.array([
-            3.26E+14, 2.14E+14, 3.13E+13, 3.44E+12, 3.75E+11,
-            4.11E+10, 4.66E+09, 6.58E+08, 1.85E+08, 8.72E+07,
-            3.58E+07, 9.46E+06, 1.48E+06, 1.46E+05, 1.03E+04,
-            5.97E+02, 3.07E+01, 1.49E+00, 7.02E-02, 3.26E-03,
-            1.50e-4, 1.46e-5, 1.15e-6, 1.07e-7
-        ])
-        # The final two elements are from Neukum, and the third to the last
-        # is extrapolated from Neukum, but this allows for a smooth
-        # transition.
+        diameters = np.append(diameters, n_diams)
+        fluxes = np.append(fluxes, n_fluxes)
 
-        p = Polynomial.fit(np.log10(diameters), np.log10(fluxes), 11)
+        # diameters in meters, and fluxes in m^-2 Gyr^-1
+        return diameters, fluxes
 
-        super().__init__(
-            poly=p,
-            **kwargs
+    @staticmethod
+    def hoho_diameter(
+        radii,  # numpy array in meters
+        masses,  # numpy array in kg
+        rho,  # impactor density in kg m^-3
+        gravity=1.62,  # m s^-2
+        strength=1.0e4,  # Pa
+        targdensity=1500.0,  # kg/m3 (rho)
+        velocity=20000.0,  # m/s
+        alpha=45.0,  # impact angle degrees
+        nu=(1.0 / 3.0),  # ~1/3 to 0.4
+        mu=0.41,  # ~0.4 to 0.55
+        K1=0.132,
+        K2=0.26,
+        Kr=(1.1 * 1.3)  # Kr and KrRim
+    ):
+        # This function is adapted from Caleb's research code.  He says:
+        # Varying mu makes a big difference in scaling, 0.41 from Williams et al.
+        # would predict lower fluxes / longer equilibrium times and a
+        # discontinuity with Neukum
+
+        effvelocity = velocity * math.sin(math.radians(alpha))
+        densityratio = (targdensity / rho)
+
+        # impmass=((4.0*math.pi)/3.0)*impdensity*(impradius**3.0)  #impactormass
+        pi2 = (gravity * radii) / math.pow(effvelocity, 2.0)
+
+        pi3 = strength / (targdensity * math.pow(effvelocity, 2.0))
+
+        expone = (6.0 * nu - 2.0 - mu) / (3.0 * mu)
+        exptwo = (6.0 * nu - 2.0) / (3.0 * mu)
+        expthree = (2.0 + mu) / 2.0
+        expfour = (-3.0 * mu) / (2.0 + mu)
+        piV = K1 * (
+            pi2 * np.power(densityratio, expone) +
+            np.power(
+                K2 * np.power(pi3 * np.power(densityratio, exptwo), expthree),
+                expfour
+            )
         )
+        V = (masses * piV) / targdensity  # m3 for crater
+        rim_radius = Kr * np.power(V, (1 / 3))
+
+        return 2 * rim_radius
 
 
 class GNPF(NPF):
@@ -574,6 +649,7 @@ class GNPF(NPF):
         grun_kwargs["b"] = 10
 
         self.grun = Grun(**grun_kwargs)
+        # self.grunstop = 2.5
 
     def csfd(self, d):
         if isinstance(d, Number):
@@ -582,8 +658,18 @@ class GNPF(NPF):
         else:
             diam = d
         c = np.empty_like(diam)
+        # overlap = np.logical_and(diam > self.grunstop, diam < 10)
         c[diam >= 10] = super().csfd(diam[diam >= 10])
         c[diam < 10] = self.grun.csfd(diam[diam < 10])
+        # c[overlap] = np.power(10, np.interp(
+        #     np.log10(diam[overlap]),
+        #     [np.log10(self.grunstop), np.log10(10)],
+        #     [
+        #         np.log10(self.grun.csfd(self.grunstop)),
+        #         np.log10(super().csfd(10))
+        #     ]
+        # ))
+        # c[diam <= self.grunstop] = self.grun.csfd(diam[diam <= self.grunstop])
         if isinstance(d, Number):
             return c[0]
         else:
@@ -603,9 +689,77 @@ class GNPF(NPF):
             # Convert to numpy array, if needed.
             d = np.array([d, ])
         c = np.empty_like(d)
+        overlap = np.logical_and(diam > self.grunstop, diam < 10)
         c[d >= 10] = super()._cdf(d[d >= 10])
         c[d < 10] = self.grun._cdf(d[d < 10])
+        # c[overlap] = np.power(10, np.interp(
+        #     np.log10(d[overlap]),
+        #     [np.log10(self.grunstop), np.log10(10)],
+        #     [
+        #         np.log10(self.grun._cdf(self.grunstop)),
+        #         np.log10(super()._cdf(10))
+        #     ]
+        # ))
+        # c[d <= self.grunstop] = self.grun._cdf(d[d <= self.grunstop])
         return c
+
+
+class GNPF_fit(Coef_Distribution):
+    """
+    This describes a combination function such that it functions as a Neukum
+    Production Function (NPF) for the size ranges where NPF is appropriate,
+    and as a Grun function where that is appropriate.  Rather than being
+    piecewise correct (which can cause unrealistic behavior where the two
+    functions meet at 10 m diameter, this fits a new, single 11-degree
+    polynomial across the span of both functions.  This resulting function
+    is similar but not equal to Grun or Neukum in the ranges where they are
+    appropriate, but does join together smoothly at 10 m diameters.
+    """
+
+    def __init__(self, a, b, **kwargs):
+        if b <= 10:
+            raise ValueError(
+                f"The upper bound, b, is {b}, you should use Grun, not GNPF."
+            )
+
+        if a >= 10:
+            raise ValueError(
+                f"The lower bound, a, is {a}, you should use NPF, not GNPF."
+            )
+
+        # Need to get Grun data points:
+        grun_diams, grun_fluxes = Grun.parameters()
+
+        # Now need to get Neukum and sample points:
+        npf = NPF(10, b, **kwargs)
+        npf_diams = np.geomspace(10, 300000, 1000)
+        npf_fluxes = np.float_power(10, npf.poly(np.log10(npf_diams / 1000)))
+
+        # The Coef_Distribution polynomial needs diameters
+        # in kilometers, so divide by 1000.  And fluxes need
+        # to be in /km^2 /Gyr, so multiply by a million.
+        diameters = np.append(grun_diams, npf_diams) / 1000
+        fluxes = np.append(grun_fluxes * 1e6, npf_fluxes)
+
+        # import sys
+        # np.set_printoptions(threshold=sys.maxsize)
+        # print(np.log10(diameters))
+        # print(grun_fluxes)
+        # print(npf_fluxes)
+        # print(fluxes)
+        # print(np.log10(fluxes))
+        # np.set_printoptions(threshold=False)
+
+        p = Polynomial.fit(
+            np.log10(diameters), np.log10(fluxes), 11
+        )
+
+        kwargs["a"] = a
+        kwargs["b"] = b
+        super().__init__(
+            poly=p,
+            **kwargs
+        )
 
 
 # If new equilibrium functions are added, add them to this list to expose them
