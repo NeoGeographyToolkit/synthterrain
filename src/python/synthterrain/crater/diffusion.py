@@ -24,7 +24,7 @@ import numpy as np
 from numpy.polynomial import Polynomial
 import pandas as pd
 
-from synthterrain.crater.profile import FT_Crater, stopar_fresh_dd
+from synthterrain.crater.profile import FTmod_Crater, stopar_fresh_dd
 
 
 logger = logging.getLogger(__name__)
@@ -78,7 +78,7 @@ def kappa_diffusivity(diameter: float) -> float:
     # kappa0=5.5e-6, kappa_corr=0.9
     # return kappa0 * math.pow(diameter / 1000, kappa_corr)
 
-    # The logic below was replaced the above simple logic on
+    # The logic below replaced the above simple logic on
     # 2022-05-22 by Caleb.
     if diameter <= 11.2:
         k = 0.0155  # m2/myr
@@ -101,7 +101,7 @@ def diffuse_d_over_D(
     start_dd_std=0.02,
     return_steps=False,
     return_surface=False,
-    crater_cls=FT_Crater
+    crater_cls=FTmod_Crater
 ):
     """
     Returns a depth to diameter ratio of a crater of *diameter* in meters
@@ -135,8 +135,8 @@ def diffuse_d_over_D(
     surface of zero.
 
     If a different crater profile is desired, pass a subclass (not an instance)
-    of crater.profile.Crater to *crater_cls*, otherwise defaults to
-    crater.profile.FT_crater.
+    of crater.profile.Crater to *crater_cls* that takes a depth parameter,
+    otherwise defaults to crater.profile.FTmod_Crater.
     """
     # Set up grid and initialize crater shape.
 
@@ -150,18 +150,20 @@ def diffuse_d_over_D(
     xx, yy = np.meshgrid(x, x, sparse=True)  # square domain
     rr = np.sqrt(xx**2 + yy**2)
 
-    # Create the initial crater bowl shape in the surface.
-    u = crater_cls(diameter).profile(rr)
-
-    # Alter depth/Diameter ratio of crater, if specified.
-    crater_dd = (np.max(u) - np.min(u)) / diameter
+    # Create crater with the right depth
     if isinstance(start_dd_adjust, bool):
         if start_dd_adjust:
-            u *= np.random.normal(start_dd_mean, start_dd_std) / crater_dd
+            # u *= np.random.normal(start_dd_mean, start_dd_std) / crater_dd
+            s_dd = np.random.normal(start_dd_mean, start_dd_std)
+            crater = crater_cls(diameter, depth=(s_dd * diameter))
         else:
-            pass  # make no adjustment
+            crater = crater_cls(diameter)
     else:
-        u *= start_dd_adjust / crater_dd
+        # u *= start_dd_adjust / crater_dd
+        crater = crater_cls(diameter, depth=(start_dd_adjust * diameter))
+
+    # Now create starting height field:
+    u = crater.profile(rr)
 
     # This commented block is a structure from Caleb's code, which was mostly
     # meant for larger craters, but for small craters (<~ 10 m), the d/D
@@ -225,7 +227,6 @@ def diffuse_d_over_D_by_bin(
     domain_size=200,
     start_dd_mean=0.15,
     start_dd_std=0.02,
-    lower_dd_limit=None,
 ) -> pd.DataFrame:
     """
     Returns a pandas DataFrame identical to the input *df* but with the
