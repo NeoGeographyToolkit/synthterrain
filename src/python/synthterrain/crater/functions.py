@@ -520,18 +520,23 @@ class Grun(Interp_Distribution):
     value of the Neukum et al. (2001) production function at d=10 m.
     """
 
-    def __init__(self, a, b, **kwargs):
+    def __init__(self, **kwargs):
         # This method for using Grun et al. (1985) to "simulate" a crater
         # distribution is from Caleb Fassett, pers. comm.
         diameters, fluxes = self.parameters()
 
-        if b > max(diameters):
-            raise ValueError(
-                "The upper bound of the support of the distribution, b, must "
-                f"be <= {max(diameters)}."
-            )
-        kwargs["a"] = a
-        kwargs["b"] = b
+        if "b" in kwargs:
+            if kwargs["b"] > max(diameters):
+                raise ValueError(
+                    "The upper bound of the support of the distribution, b, must "
+                    f"be <= {max(diameters)}."
+                )
+        else:
+            kwargs["b"] = max(diameters)
+
+        if "a" not in kwargs:
+            kwargs["a"] = min(diameters)
+
         kwargs["diameters"] = diameters
         kwargs["csfds"] = fluxes
 
