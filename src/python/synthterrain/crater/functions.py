@@ -603,19 +603,37 @@ class Grun(Coef_Distribution):
 
         pi3 = strength / (targdensity * math.pow(effvelocity, 2.0))
 
+        # https://www.annualreviews.org/doi/epdf/10.1146/annurev.ea.21.050193.002001
+        # I have a concern about the piV function.  I think expfour should be
+        # applied to the whole quantity that K1 multiplies.  There is a similar
+        # problem with expthree.  Caleb just messed up his parentheses in the
+        # original code.  This can wait.
+
         expone = (6.0 * nu - 2.0 - mu) / (3.0 * mu)
         exptwo = (6.0 * nu - 2.0) / (3.0 * mu)
         expthree = (2.0 + mu) / 2.0
         expfour = (-3.0 * mu) / (2.0 + mu)
         piV = K1 * (
-            pi2 * np.power(densityratio, expone) +
-            np.power(
-                K2 * np.power(pi3 * np.power(densityratio, exptwo), expthree),
+            pi2 * np.float_power(densityratio, expone) +
+            np.float_power(
+                K2 * np.float_power(
+                    pi3 * np.float_power(densityratio, exptwo), expthree
+                ),
                 expfour
             )
         )
+        # New implementation, correct to Holsapple (1993,
+        # doi:10.1146/annurev.ea.21.050193.002001)
+        # piV = K1 * np.float_power(
+        #     (pi2 * np.float_power(densityratio, expone)) +
+        #     np.float_power(
+        #         K2 * pi3 * np.float_power(densityratio, exptwo),
+        #         expthree
+        #     ),
+        #     expfour
+        # )
         V = (masses * piV) / targdensity  # m3 for crater
-        rim_radius = Kr * np.power(V, (1 / 3))
+        rim_radius = Kr * np.float_power(V, (1 / 3))
 
         return 2 * rim_radius
 
