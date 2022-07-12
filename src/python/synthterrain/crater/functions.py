@@ -18,6 +18,7 @@ from numbers import Number
 
 import numpy as np
 from numpy.polynomial import Polynomial
+from scipy.interpolate import interp1d
 from scipy.stats import rv_continuous
 
 logger = logging.getLogger(__name__)
@@ -472,7 +473,46 @@ class NPF(Coef_Distribution):
         )
 
 
-class Grun(Coef_Distribution):
+class Interp_Distribution(Crater_rv_continuous):
+    """This class instantiates a continuous crater distribution based
+       on interpolation of a set of data points.
+
+       The input arrays assume that the diameter values are in meters
+       and the cumulative size frequency distribution values are in
+       counts per square meter.
+    """
+
+    def __init__(self, *args, diameters=None, csfds=None, func=None, **kwargs):
+        if diameters is None and func is None:
+            raise ValueError(
+                "An Interp_Distribution object must be initiated with "
+                "*diameters* and *csfds* array-likes of data from which an "
+                "interpolated function will be constructed, or a *func* object "
+                "which must be callable with diameter values and will return "
+                "csfd values."
+            )
+        super().__init__(*args, **kwargs)
+
+        if diameters is not None:
+            func = interp1d(np.log10(diameters), np.log10(csfds))
+
+        self.func = func
+
+    def csfd(self, d):
+        """Returns the crater cumulative size frequency distribution function
+           value for *d*.
+        """
+        return np.float_power(10, self.func(np.log10(d)))
+
+    def _cdf(self, d):
+        """Override parent function to speed up."""
+        return np.ones_like(d) - np.float_power(
+            10,
+            self.func(np.log10(d)) - self.func(np.log10(self.a))
+        )
+
+
+class Grun(Interp_Distribution):
     """
     Grun et al. (1985, https://doi.org/10.1016/0019-1035(85)90121-6)
     describe a small particle impact flux, which can be converted into
@@ -481,29 +521,34 @@ class Grun(Coef_Distribution):
     """
 
     def __init__(self, a, b, **kwargs):
-        if b > 10:
-            raise ValueError(
-                "The upper bound of the support of the distribution, b, must "
-                "be <= 10."
-            )
-        kwargs["a"] = a
-        kwargs["b"] = b
-
         # This method for using Grun et al. (1985) to "simulate" a crater
         # distribution is from Caleb Fassett, pers. comm.
         diameters, fluxes = self.parameters()
 
-        # The Coef_Distribution polynomial needs diameters
-        # in kilometers, so divide by 1000.  And fluxes need
-        # to be in /km^2 /Gyr, so multiply by a million.
-        p = Polynomial.fit(
-            np.log10(diameters / 1000), np.log10(fluxes * 1e6), 11
-        )
+        if b > max(diameters):
+            raise ValueError(
+                "The upper bound of the support of the distribution, b, must "
+                f"be <= {max(diameters)}."
+            )
+        kwargs["a"] = a
+        kwargs["b"] = b
+        kwargs["diameters"] = diameters
+        kwargs["csfds"] = fluxes
 
-        super().__init__(
-            poly=p,
-            **kwargs
-        )
+        super().__init__(**kwargs)
+
+        # These comments temporarily preserve the Coef_Distribution model
+        # # The Coef_Distribution polynomial needs diameters
+        # # in kilometers, so divide by 1000.  And fluxes need
+        # # to be in /km^2 /Gyr, so multiply by a million.
+        # p = Polynomial.fit(
+        #     np.log10(diameters / 1000), np.log10(fluxes * 1e6), 11
+        # )
+
+        # super().__init__(
+        #     poly=p,
+        #     **kwargs
+        # )
 
     @staticmethod
     def parameters():
@@ -517,7 +562,8 @@ class Grun(Coef_Distribution):
 
         # We'll generate "craters" based on masses from 10^-18 to the upper
         # valid limit of 10^2 grams for these equations.
-        masses = np.logspace(-18, 2, 21)  # in grams
+        # masses = np.logspace(-18, 2, 21)  # in grams
+        masses = np.logspace(-18, 2, 201)  # in grams
         # masses = np.logspace(-18, 0, 19)  # in grams
         # print(masses)
 
@@ -528,13 +574,15 @@ class Grun(Coef_Distribution):
         gamma = (0, 1.85, 3.7, -0.52, 0.306, -4.38)
 
         def a_elem(mass, i):
-            return c[i] * np.power(mass, gamma[i])
+            return c[i] * np.float_power(mass, gamma[i])
 
         def a2(mass):
             # Returns flux in m^-2 s^-1
             return (
-                np.power(a_elem(mass, 1) + a_elem(mass, 2) + c[3], gamma[3]) +
-                np.power(a_elem(mass, 4) + c[5], gamma[5])
+                np.float_power(
+                    a_elem(mass, 1) + a_elem(mass, 2) + c[3], gamma[3]
+                ) +
+                np.float_power(a_elem(mass, 4) + c[5], gamma[5])
             )
 
         # fluxes = a2(masses) * 86400.0 * 365.25  # convert to m^-2 yr^-1
@@ -551,7 +599,7 @@ class Grun(Coef_Distribution):
         #   r = [ (3 * m) / (4 * pi * rho) ] ^(1/3)
         #
         rho = 2.5e+6  # g/m^-3
-        radii = np.power(
+        radii = np.float_power(
             (3 * masses) / (4 * math.pi * rho),
             1 / 3
         )  # should be radii in meters.
@@ -560,16 +608,16 @@ class Grun(Coef_Distribution):
         # Housen & Holsapple (2011) scaling.
         diameters = Grun.hoho_diameter(radii, masses / 1000, rho / 1000)
 
-        # The above largest diameter only gets you 2.5 m diameter craters.  And
-        # Neukum doesn't start until 10 m, so we're going to pick out some
-        # diameters from Neukum to add to these so that the polynomial in Grun()
-        # spans the space.
-        npf = NPF(10, 100)
-        n_diams = np.array([10, 15, 20, 30, 50, 100])
-        n_fluxes = npf.csfd(n_diams)
-
-        diameters = np.append(diameters, n_diams)
-        fluxes = np.append(fluxes, n_fluxes)
+        # # The above largest diameter only gets you 2.5 m diameter craters.  And
+        # # Neukum doesn't start until 10 m, so we're going to pick out some
+        # # diameters from Neukum to add to these so that the polynomial in Grun()
+        # # spans the space.
+        # npf = NPF(10, 100)
+        # n_diams = np.array([10, 15, 20, 30, 50, 100])
+        # n_fluxes = npf.csfd(n_diams)
+        #
+        # diameters = np.append(diameters, n_diams)
+        # fluxes = np.append(fluxes, n_fluxes)
 
         # diameters in meters, and fluxes in m^-2 Gyr^-1
         return diameters, fluxes
@@ -638,6 +686,159 @@ class Grun(Coef_Distribution):
         return 2 * rim_radius
 
 
+class GNPF_old(NPF):
+    """
+    This describes a combination function such that it functions as a Neukum
+    Production Function (NPF) for the size ranges where NPF is appropriate,
+    and as a Grun function where that is appropriate.
+    """
+
+    def __init__(self, a, b, interp="extendGrun", **kwargs):
+        if b <= 2.5:
+            raise ValueError(
+                f"The upper bound, b, is {b}, you should use Grun, not GNPF."
+            )
+
+        if a >= 10:
+            raise ValueError(
+                f"The lower bound, a, is {a}, you should use NPF, not GNPF."
+            )
+
+        interp_types = ("extendGrun", "linear", "interp")
+        if interp in interp_types:
+            self.interp = interp
+        else:
+            raise ValueError(
+                f"The interpolation method, {interp} "
+                f"is not one of {interp_types}."
+            )
+
+        # Will now construct *this* as an NPF with a Grun hidden inside.
+        npf_kwargs = copy.deepcopy(kwargs)
+        npf_kwargs["a"] = 10
+        npf_kwargs["b"] = b
+        super().__init__(**npf_kwargs)  # Calls NPF __init__()
+
+        grun_kwargs = copy.deepcopy(kwargs)
+        grun_kwargs["a"] = a
+        if self.interp == "extendGrun":
+            grun_kwargs["b"] = 10
+            grun_d, grun_f = Grun.parameters()
+            # The above largest diameter only gets you 2.5 m diameter craters.
+            # And Neukum doesn't start until 10 m, so we're going to pick out
+            # some # diameters from Neukum to add to these so that the
+            # polynomial spans the space.
+            npf = NPF(10, 100)
+            n_diams = np.array([10, 15, 20, 30, 50, 100])
+            n_fluxes = npf.csfd(n_diams)
+
+            diameters = np.append(grun_d, n_diams)
+            fluxes = np.append(grun_f, n_fluxes)
+
+            p = Polynomial.fit(
+                np.log10(diameters / 1000), np.log10(fluxes * 1e6), 11
+            )
+
+            self.grun = Coef_Distribution(poly=p, **grun_kwargs)
+        elif self.interp == "interp":
+            grun_kwargs["b"] = 10
+            grun_d, grun_f = Grun.parameters()
+            npf = NPF(10, 100)
+            n_diam = 10
+            n_flux = npf.csfd(n_diam)
+            diameters = np.append(grun_d, n_diam)
+            fluxes = np.append(grun_f, n_flux)
+            grun_kwargs["diameters"] = diameters
+            grun_kwargs["csfds"] = fluxes
+            self.grun = Interp_Distribution(**grun_kwargs)
+        else:
+            grun_kwargs["b"] = 2.5
+            self.grun = Grun(**grun_kwargs)
+
+        self.grunstop = 2.5
+
+    def csfd(self, d):
+        if isinstance(d, Number):
+            # Convert to numpy array, if needed.
+            diam = np.array([float(d), ])
+        else:
+            diam = d
+        c = np.empty_like(diam)
+
+        c[diam >= 10] = super().csfd(diam[diam >= 10])
+
+        if self.interp == "extendGrun" or self.interp == "interp":
+            c[diam < 10] = self.grun.csfd(diam[diam < 10])
+        elif self.interp == "linear":
+            d_interp = np.log10((self.grunstop, 10))
+            c_interp = np.log10((
+                self.grun.csfd(self.grunstop), super().csfd(10)
+            ))
+            # cs = CubicSpline(d_interp, c_interp)
+            f = interp1d(d_interp, c_interp)
+
+            overlap = np.logical_and(diam > self.grunstop, diam < 10)
+            # c[diam < 2.5] = self.grun.csfd(diam[diam < 2.5])
+            # c[overlap] = np.power(10, np.interp(
+            #     np.log10(diam[overlap]),
+            #     [np.log10(self.grunstop), np.log10(10)],
+            #     [
+            #         np.log10(self.grun.csfd(self.grunstop)),
+            #         np.log10(super().csfd(10))
+            #     ]
+            # ))
+            c[overlap] = np.float_power(10, f(np.log10(diam[overlap])))
+            c[diam <= self.grunstop] = self.grun.csfd(diam[diam <= self.grunstop])
+        else:
+            raise ValueError(
+                f"The interpolation method, {self.interp}, is not recognized."
+            )
+
+        if isinstance(d, Number):
+            return c[0]
+        else:
+            return c
+
+    # def isfd(self, d):
+    #     if isinstance(d, Number):
+    #         # Convert to numpy array, if needed.
+    #         d = np.array([d, ])
+    #     i = np.empty_like(d)
+    #     i[d >= 10] = super().isfd(d[d >= 10])
+    #     i[d < 10] = self.grun.isfd(d[d < 10])
+    #     return i
+
+    def _cdf(self, d):
+        if isinstance(d, Number):
+            # Convert to numpy array, if needed.
+            d = np.array([d, ])
+        c = np.empty_like(d)
+
+        c[d >= 10] = super()._cdf(d[d >= 10])
+        if self.interp == "extendGrun":
+            c[d < 10] = self.grun._cdf(d[d < 10])
+        elif self.interp == "linear":
+            d_interp = np.log10((self.grunstop, 10))
+            c_interp = np.log10((
+                self.grun._cdf(self.grunstop), super()._cdf(10)
+            ))
+            # cs = CubicSpline(d_interp, c_interp)
+            f = interp1d(d_interp, c_interp)
+
+            overlap = np.logical_and(d > self.grunstop, d < 10)
+            # c[overlap] = np.power(10, np.interp(
+            #     np.log10(d[overlap]),
+            #     [np.log10(self.grunstop), np.log10(10)],
+            #     [
+            #         np.log10(self.grun._cdf(self.grunstop)),
+            #         np.log10(super()._cdf(10))
+            #     ]
+            # ))
+            c[overlap] = np.float_power(10, f(np.log10(d[overlap])))
+            c[d <= self.grunstop] = self.grun._cdf(d[d <= self.grunstop])
+        return c
+
+
 class GNPF(NPF):
     """
     This describes a combination function such that it functions as a Neukum
@@ -666,8 +867,18 @@ class GNPF(NPF):
         grun_kwargs["a"] = a
         grun_kwargs["b"] = 10
 
-        self.grun = Grun(**grun_kwargs)
-        # self.grunstop = 2.5
+        # Need to get Grun data points and extend to the first NPF point:
+        grun_diams, grun_fluxes = Grun.parameters()
+        npf = NPF(10, b, **kwargs)
+        n_diam = 10
+        n_flux = npf.csfd(n_diam)
+        diameters = np.append(grun_diams, n_diam)
+        fluxes = np.append(grun_fluxes, n_flux)
+        grun_kwargs["diameters"] = diameters
+        grun_kwargs["csfds"] = fluxes
+        self.grun = Interp_Distribution(**grun_kwargs)
+
+        return
 
     def csfd(self, d):
         if isinstance(d, Number):
@@ -676,49 +887,23 @@ class GNPF(NPF):
         else:
             diam = d
         c = np.empty_like(diam)
-        # overlap = np.logical_and(diam > self.grunstop, diam < 10)
+
         c[diam >= 10] = super().csfd(diam[diam >= 10])
         c[diam < 10] = self.grun.csfd(diam[diam < 10])
-        # c[overlap] = np.power(10, np.interp(
-        #     np.log10(diam[overlap]),
-        #     [np.log10(self.grunstop), np.log10(10)],
-        #     [
-        #         np.log10(self.grun.csfd(self.grunstop)),
-        #         np.log10(super().csfd(10))
-        #     ]
-        # ))
-        # c[diam <= self.grunstop] = self.grun.csfd(diam[diam <= self.grunstop])
+
         if isinstance(d, Number):
             return c[0]
         else:
             return c
-
-    # def isfd(self, d):
-    #     if isinstance(d, Number):
-    #         # Convert to numpy array, if needed.
-    #         d = np.array([d, ])
-    #     i = np.empty_like(d)
-    #     i[d >= 10] = super().isfd(d[d >= 10])
-    #     i[d < 10] = self.grun.isfd(d[d < 10])
-    #     return i
 
     def _cdf(self, d):
         if isinstance(d, Number):
             # Convert to numpy array, if needed.
             d = np.array([d, ])
         c = np.empty_like(d)
-        overlap = np.logical_and(diam > self.grunstop, diam < 10)
+
         c[d >= 10] = super()._cdf(d[d >= 10])
         c[d < 10] = self.grun._cdf(d[d < 10])
-        # c[overlap] = np.power(10, np.interp(
-        #     np.log10(d[overlap]),
-        #     [np.log10(self.grunstop), np.log10(10)],
-        #     [
-        #         np.log10(self.grun._cdf(self.grunstop)),
-        #         np.log10(super()._cdf(10))
-        #     ]
-        # ))
-        # c[d <= self.grunstop] = self.grun._cdf(d[d <= self.grunstop])
         return c
 
 
