@@ -2,6 +2,8 @@
 
 import math
 import numpy as np
+import scipy.ndimage
+import csv
 
 # Utility defs for synthetic terrain 
 # generation
@@ -45,7 +47,7 @@ def revCDF_2_histogram(rev_cdf):
 # 
 def revCDF_2_PDF(rev_cdf):
     pdf = rev_cdf[0:-1] - rev_cdf[1:]
-    pdf = [pdf, 0] 
+    pdf = np.append(pdf, 0)
     pdf = pdf / np.nansum(pdf)
     return pdf
 
@@ -57,9 +59,18 @@ def revCDF_2_PDF(rev_cdf):
 def addGradientNoise(location_probability_map, amount):
     
     [gx, gy] = np.gradient(location_probability_map)
-    hfilt = np.fspecial('disk', 11)
-    gx = np.imfilter(gx, hfilt)
-    gy = np.imfilter(gy, hfilt)
+
+
+    # No disk function in numpy so the values are hardcoded in a file
+    temp = '/usr/local/home/smcmich1/repo/synthterrain/disk.txt' # TODO
+    hfilt = np.loadtxt(temp)
+    #hfilt = np.fspecial('disk', 11)
+
+    # TODO: Verify accuracy!
+    gx = scipy.ndimage.correlate(gx, hfilt, mode='constant').transpose()
+    gy = scipy.ndimage.correlate(gy, hfilt, mode='constant').transpose()
+    #gx = np.imfilter(gx, hfilt)
+    #gy = np.imfilter(gy, hfilt)
 
     # Re-integrate the noise derivatives to 
     # generate the multiplicative displacement
@@ -72,19 +83,18 @@ def addGradientNoise(location_probability_map, amount):
 # Downsample using fastest possible method with no regard
 # for oversampling dense areas. 
 #
-# @param input: [N x M] matrix, 
+# @param input: [M x N] matrix, 
 #            where N is the number of points, 
 #            and M is the number of attributes per point
 # @param num_points: number of points in the downsampled matrix
 #            1 < num_points < N
-# @return output: [num_points x M]   
+# @return output: [M x num_points]
 # @return idx:
-# @author uyw (Uland Wong)
 #
 def downSample(input, num_points):
-    num_points = min(num_points, input.size()[0])
-    idx = np.random.choice(input.size()[0], num_points, False)
-    output = input[idx, :]
+    num_points = min(num_points, input.shape[1])
+    idx = np.random.choice(input.shape[1], num_points, False)
+    output = input[:, idx]
     return [output, idx]
 
 #------------------------------------------
@@ -98,10 +108,11 @@ def downSample(input, num_points):
 # @return matrix:
 #
 def rescale(matrix, limits):
-    if not (len(limits)==2 and limits(1) > limits(0)):
+
+    if not (len(limits)==2 and limits[1] > limits[0]):
         raise Exception('limits must be [low high]')
 
-    if len(matrix.size()) != 2:
+    if len(matrix.shape) != 2:
         raise Exception('image must be a 2.5D heightfield')
 
     matrix_min = matrix.min()
@@ -151,12 +162,12 @@ def rescale(matrix, limits):
 #
 # October 2004
 #
-def frankotchellappa(dzdx,dzdy):
+def frankotchellappa(dzdx, dzdy):
 
-    if not dzdx.size() == dzdy.size():
+    if dzdx.shape != dzdy.shape:
       raise Exception('Gradient matrices must match')
 
-    [rows,cols] = dzdx.size()
+    [rows,cols] = dzdx.shape
 
     # The following sets up matrices specifying frequencies in the x and y
     # directions corresponding to the Fourier transforms of the gradient
@@ -168,20 +179,23 @@ def frankotchellappa(dzdx,dzdy):
                            (range(0,rows) - (np.fix(rows/2))) / (rows-np.mod(rows,2)))
 
     # Quadrant shift to put zero frequency at the appropriate edge
-    wx = np.ifftshift(wx)
-    wy = np.ifftshift(wy)
+    wx = np.fft.ifftshift(wx)
+    wy = np.fft.ifftshift(wy)
 
-    DZDX = np.fft2(dzdx)   # Fourier transforms of gradients
-    DZDY = np.fft2(dzdy)
+    DZDX = np.fft.fft2(dzdx)   # Fourier transforms of gradients
+    DZDY = np.fft.fft2(dzdy)
 
     # Integrate in the frequency domain by phase shifting by pi/2 and
     # weighting the Fourier coefficients by their frequencies in x and y and
     # then dividing by the squared frequency.  eps is added to the
     # denominator to avoid division by 0.
     eps = 2.2204e-16
-    Z = (-1j*wx*DZDX -1j*wy*DZDY)/(wx^2 + wy^2 + eps)  # Equation 21
+    Z_num = (-1j*wx*DZDX -1j*wy*DZDY)
+    Z_denom = (np.power(wx, 2) + np.power(wy, 2) + eps)
+    Z = Z_num / Z_denom
+    #Z = (-1j*wx*DZDX -1j*wy*DZDY) / (wx^2 + wy^2 + eps)  # Equation 21
 
-    z = np.real(np.ifft2(Z))  # Reconstruction
+    z = np.real(np.fft.ifft2(Z))  # Reconstruction
     return z
 
 #------------------------------------------
@@ -236,7 +250,7 @@ def addCraterHeights(
     for i in range(0,T):
         #fprintf('making crater #d of #d\n', i, T)
 
-        temp = createCraterTemplate(D[i], [sizeXY[i] sizeXY[i]], age[i])
+        temp = createCraterTemplate(D[i], [sizeXY[i], sizeXY[i]], age[i])
 
         # if size(temp, 1) > 50
         # 	1

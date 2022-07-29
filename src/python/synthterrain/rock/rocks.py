@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-import matplotlib as plt
 import numpy as np
-from synthterrain import Utilities
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from synthterrain.rock import utilities
 
 class Rocks:
     # Base class for rock distribution generators
@@ -22,7 +23,6 @@ class Rocks:
 
     # PROTECTED
 
-    
     #------------------------------------------
     # Constructor
     #
@@ -30,11 +30,12 @@ class Rocks:
     #            class
     #
     def __init__(self, terrain):
-        self._terrain = terrain;
+        self._terrain = terrain
         self._diameter_range_m = None
         self._diameters_m = None
         self._location_probability_map = None
         self.positions_xy = None
+        self._class_name = "BASE" # Should be set by derived class
     
     #------------------------------------------
     # Subclasses should call self def from 
@@ -47,7 +48,9 @@ class Rocks:
     #
     def generate(self, min_rock_diameter_m, step_rock_diameter_m, max_rock_diameter_m):
         
-        self._diameter_range_m = range(min_rock_diameter_m, max_rock_diameter_m, step_rock_diameter_m)
+        # Generate range [min_rock_diameter_m, max_rock_diameter_m] inclusive
+        self._diameter_range_m = np.arange(min_rock_diameter_m,
+            max_rock_diameter_m+step_rock_diameter_m, step_rock_diameter_m)
 
         self._diameters_m = []
         self.positions_xy = []
@@ -62,19 +65,13 @@ class Rocks:
     #
     def plotDensityDistribution(self, figureNumber, rev_cum_dist, profile):
         if self.PLOT_DENSITY_DISTRIBUTION:
-            fig, ax = plt.figure(figureNumber)
+            fig = plt.figure(figureNumber)
+            ax = fig.add_subplot(111)
             ax.clear()
             ax.loglog(self._diameter_range_m, rev_cum_dist, 'r+')
-            ax.xlabel('Rock Diameter (m)')
-            ax.ylabel('Cumulative Rock Number Density (#/m^2)')
-            print(str(type(self))) # TODO FIX
-            #if isinstance(self, InterCraterRocks):
-            #    ax.title('Inter-Crater Rock Density Distribution\nFit: ' + profile.upper())
-            #else:
-            #    ax.title('Intra-Crater Rock Density Distribution\nFit: ' + profile.upper())
-
-            # grid on; TODO
-            plt.show()
+            ax.set_xlabel('Rock Diameter (m)')
+            ax.set_ylabel('Cumulative Rock Number Density (#/m^2)')
+            ax.set_title(self._class_name + ' Rock Density Distribution\nFit: ' + profile.upper())
 
 
     
@@ -86,24 +83,17 @@ class Rocks:
     # @param final_sample_hist:
     #
     def plotDiameterDistributions(self, figureNumber, ideal_sample_hist, prior_sample_hist, final_sample_hist):
-        fig, ax = plt.figure(figureNumber)
+        fig = plt.figure(figureNumber)
+        ax = fig.add_subplot(111)
         ax.clear()
-        ax.loglog(self._diameter_range_m, ideal_sample_hist, 'r+')
-        #hold on;
-        ax.loglog(self._diameter_range_m, prior_sample_hist, 'g.')
-        ax.loglog(self._diameter_range_m, final_sample_hist, 'bo')
-        #hold off;
-        #grid on; # TODO
-        ax.xlabel('Rock Diameter (m)')
-        ax.ylabel('Rock Count')
-        print(str(type(self))) # TODO FIX
-        #if isa(self,'InterCraterRocks'):
-        #    ax.title('Inter-Crater Rock Diameter Distribution')
-        #else:
-        #    ax.title('Intra-Crater Rock Diameter Distribution')
+        ax.loglog(self._diameter_range_m[:-1], ideal_sample_hist, 'r+')
+        ax.loglog(self._diameter_range_m[:-1], prior_sample_hist, 'g.')
+        ax.loglog(self._diameter_range_m[:-1], final_sample_hist, 'bo')
+        ax.set_xlabel('Rock Diameter (m)')
+        ax.set_ylabel('Rock Count')
+        ax.set_title(self._class_name + ' Rock Diameter Distribution')
 
         ax.legend(['Ideal', 'Prior Sampled', 'Final Sampled'])
-        plt.show()
 
     
     #------------------------------------------
@@ -111,22 +101,22 @@ class Rocks:
     # @param figureNumber:
     #
     def plotLocationProbabilityMap(self, figureNumber):
-        fig, ax = plt.figure(figureNumber)
+        fig = plt.figure(figureNumber)
+        ax = fig.add_subplot(111)
         ax.clear()
-        ax.mesh(self._location_probability_map)
-        ax.xlabel('Terrain X (m)')
-        ax.ylabel('Terrain Y (m)')
-        ax.zlabel('Terrain Z (m)')
-        print(str(type(self))) # TODO FIX
-        #if isa(self,'InterCraterRocks'):
-        #    title('Inter-Crater Rock Location Probability Map')
-        #else:
-        #    title('Intra-Crater Rock Location Probability Map')
+        im = ax.imshow(self._location_probability_map, vmin=0.0, vmax=1.0) # TODO mesh()
+        ax.set_xlabel('Terrain X (m)')
+        ax.set_ylabel('Terrain Y (m)')
+        #ax.set_zlabel('Terrain Z (m)') # TODO
+        ax.set_title(self._class_name + ' Rock Location Probability Map')
 
-        ax.xlim([0,self.terrain.dem_size[0]])
-        ax.ylim([0,self.terrain.dem_size[1]])
-        ax.view([0,90])
-        #colorbar TODO
+        ax.set_xlim([0,self._terrain.dem_size[0]])
+        ax.set_ylim([0,self._terrain.dem_size[1]])
+        # ax.view([0,90]) TODO
+
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes('right', size='5%', pad=0.05)
+        fig.colorbar(im, cax=cax, orientation='vertical')
 
 
     #------------------------------------------
@@ -134,25 +124,20 @@ class Rocks:
     # @param figureNumber:
     #
     def plotLocations(self, figureNumber):
-        s = self._diameters_m.size()
-        num_rocks = s[0]*s[1]
-        xy = Utilities.downSample(self.positions_xy, 20000)
+        num_rocks = len(self._diameters_m)
+        xy = utilities.downSample(self.positions_xy, 20000)[0]
         color = 'b'
 
-        fig, ax = plt.figure(figureNumber)
+        fig = plt.figure(figureNumber)
+        ax = fig.add_subplot(111)
         ax.clear()
-        ax.plot(xy[:,0], xy[:,1], 'o', 'MarkerSize', 1, 'Color', color, 'MarkerFaceColor',color)
-        ax.xlabel('Terrain X (m)')
-        ax.ylabel('Terrain Y (m)')
-        print(str(type(self))) # TODO FIX
-        #if isa(self,'InterCraterRocks'):
-        #    title(sprintf('Inter-Crater Rock Locations\nRock Count = #d', num_rocks))
-        #else:
-        #    title(sprintf('Intra-Crater Rock Locations\nRock Count = #d', num_rocks))
+        ax.plot(xy[0,:], xy[1,:], 'o', markersize=1, color=color, markerfacecolor=color)
+        ax.set_xlabel('Terrain X (m)')
+        ax.set_ylabel('Terrain Y (m)')
+        ax.set_title(self._class_name + ' Rock Locations\nRock Count = ' + str(num_rocks))
 
-        #grid on # TODO
-        ax.xlim([0,self.terrain.dem_size[0]])
-        ax.ylim([0,self.terrain.dem_size[1]])
+        ax.set_xlim([0,self._terrain.dem_size[0]])
+        ax.set_ylim([0,self._terrain.dem_size[1]])
 
 
     #------------------------------------------
@@ -162,7 +147,7 @@ class Rocks:
     # @return h:
     #
     def plot3(self, z, color):
-        [xy,idx] = Utilities.downSample(self.positions_xy, 20000)
+        [xy,idx] = utilities.downSample(self.positions_xy, 20000)
         h = plt.plot3(xy[:,0], xy[:,1], z[idx], 'o', 'MarkerSize', 1, 'Color', color, 'MarkerFaceColor',color)
         return h
 
@@ -180,7 +165,7 @@ class Rocks:
         
         fid.write('<?xml version="1.0" encoding="UTF-8"?>\n')
         fid.write('<RockList name="UserRocks">\n')
-        s = f'    <RockData diameter="{np.as_array(self._diameters_m)}" x="{self.positions_xy[:,0] + self.terrain.origin[0]}" y="{self.positions_xy[:,1] + self.terrain.origin[1]}"/>\n'
+        s = f'    <RockData diameter="{np.as_array(self._diameters_m)}" x="{self.positions_xy[:,0] + self._terrain.origin[0]}" y="{self.positions_xy[:,1] + self_terrain.origin[1]}"/>\n'
         fid.write(s),
         fid.write('</RockList>\n')
 
@@ -191,36 +176,34 @@ class Rocks:
     # 
     # @param self:
     #
-    def _placeRocks(self):
-        s = self._diameters_m.size()
-        num_rocks = s[0] * s[1]
+    def placeRocks(self):
+        num_rocks = len(self._diameters_m)
 
         # Sample rough probability map first 
         # the probability map is voxelized, so we'll get 
         # whole number positions from sampling it
-        s = self._location_probability_map.size()
-        rock_positions_idx = np.random.choice(
-            range(0,s[0]*s[1]),
+        prob_map_sum = np.sum(self._location_probability_map)
+        flat_prob_map = self._location_probability_map.flatten() / prob_map_sum
+        rock_positions_idx = self._terrain.random_generator.choice(
+            range(0,len(flat_prob_map)),
             num_rocks,
-            False,
-            np.asarray(self._location_probability_map) # Weights
+            True, # Choose with replacement
+            flat_prob_map # Weights
         )
 
-        [rock_pos_y, rock_pos_x] = np.ravel_multi_index(
-            self.terrain.dem_size([1, 0]),
-            rock_positions_idx)
+        [rock_pos_y, rock_pos_x] = np.unravel_index(
+            rock_positions_idx, self._terrain.dem_size)
 
         # Sample uniformly in the grid within each 
         # fractional voxel, decide where the rock goes 
         # (we dont want rocks placed only on whole 
         # number coordinates)
-        delta_pos = np.rand(2, num_rocks)
+        delta_pos = self._terrain.random_generator.random([2, num_rocks])
 
-        rock_pos_x = np.mod(rock_pos_x + delta_pos[0,:], self.terrain.dem_size[0])
-        rock_pos_y = np.mod(rock_pos_y + delta_pos[1,:], self.terrain.dem_size[1])
+        rock_pos_x = np.mod(rock_pos_x + delta_pos[0,:], self._terrain.dem_size[0])
+        rock_pos_y = np.mod(rock_pos_y + delta_pos[1,:], self._terrain.dem_size[1])
 
-        self.positions_xy[:,0] = rock_pos_x
-        self.positions_xy[:,1] = rock_pos_y
+        self.positions_xy = np.stack((rock_pos_x, rock_pos_y))
 
 # End class Rocks
 
@@ -255,6 +238,6 @@ def calculateDensity(diameter_m, profile):
     else:
         raise Exception('Invalid rock density profile specified')
 
-    num_rocks_per_square_m = A * diameter_m ^ B
+    num_rocks_per_square_m = A * np.power(diameter_m, B)
     return num_rocks_per_square_m
 

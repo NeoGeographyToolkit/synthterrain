@@ -11,11 +11,21 @@
 
 import logging
 from pathlib import Path
+from re import T
+import matplotlib.pyplot as plt
 import sys
+
+from matplotlib.pyplot import figure
 
 from shapely.geometry import box
 
 import synthterrain.util as util
+
+from synthterrain.rock import terrain
+from synthterrain.rock import rocks
+from synthterrain.rock import inter_crater_rocks
+from synthterrain.rock import intra_crater_rocks
+from synthterrain.rock import utilities
 
 logger = logging.getLogger(__name__)
 
@@ -53,15 +63,39 @@ def main():
     # This could more generically take an arbitrary polygon
     # What if the polygon is different than the one in the crater file?
     # Probably need to figure out how to standardize and robustify.
-    canvas = box(*args.bbox)
+    #canvas = box(*args.bbox)
 
     # Do generic rock distro across bbox.
+    print('TERRAIN')
+    t = terrain.Terrain()
+    t.setOrigin(0, 0) #TODO
+    t.setXsize(200) #TODO
+    t.setYsize(200) #TODO
+    print('TERRAIN generate')
+    t.generate()
+
+    #print('InterCraterRocks')
+    #inter = inter_crater_rocks.InterCraterRocks(t)
+    print('IntraCraterRocks')
+    intra = intra_crater_rocks.IntraCraterRocks(t)
 
     # Do intracrater rock distro if crater details are provided.
+    #intra = IntraCraterRocks()
 
-    # Write out results.
-    # rock.to_file(df, args.outfile, args.xml)
+    #TODO: configure both types
 
+    # This also writes the output file
+    print('GENERATE')
+    #inter.generate()
+    intra.generate()
+
+    # TODO: Pick one or more of the existing functions
+    if True:#args.plot: TODO
+        print('PLOT')
+        figureNumber = 1
+        #inter.plotLocations(figureNumber)
+        intra.plotLocations(figureNumber)
+    plt.show()
     return
 
 
