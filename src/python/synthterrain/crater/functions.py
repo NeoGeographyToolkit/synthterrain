@@ -643,10 +643,12 @@ class Grun(Interp_Distribution):
         K2=0.26,
         Kr=(1.1 * 1.3)  # Kr and KrRim
     ):
-        # This function is adapted from Caleb's research code.  He says:
-        # Varying mu makes a big difference in scaling, 0.41 from Williams et al.
-        # would predict lower fluxes / longer equilibrium times and a
-        # discontinuity with Neukum
+        # This function is adapted from Caleb's research code, but is based
+        # on Holsapple (1993,
+        # https://www.annualreviews.org/doi/epdf/10.1146/annurev.ea.21.050193.002001
+        # ).  He says: # Varying mu makes a big difference in scaling, 0.41 from
+        # Williams et al. would predict lower fluxes / longer equilibrium times
+        # and a discontinuity with Neukum
 
         effvelocity = velocity * math.sin(math.radians(alpha))
         densityratio = (targdensity / rho)
@@ -656,35 +658,18 @@ class Grun(Interp_Distribution):
 
         pi3 = strength / (targdensity * math.pow(effvelocity, 2.0))
 
-        # https://www.annualreviews.org/doi/epdf/10.1146/annurev.ea.21.050193.002001
-        # I have a concern about the piV function.  I think expfour should be
-        # applied to the whole quantity that K1 multiplies.  There is a similar
-        # problem with expthree.  Caleb just messed up his parentheses in the
-        # original code.  This can wait.
-
         expone = (6.0 * nu - 2.0 - mu) / (3.0 * mu)
         exptwo = (6.0 * nu - 2.0) / (3.0 * mu)
         expthree = (2.0 + mu) / 2.0
         expfour = (-3.0 * mu) / (2.0 + mu)
-        piV = K1 * (
-            pi2 * np.float_power(densityratio, expone) +
+        piV = K1 * np.float_power(
+            (pi2 * np.float_power(densityratio, expone)) +
             np.float_power(
-                K2 * np.float_power(
-                    pi3 * np.float_power(densityratio, exptwo), expthree
-                ),
-                expfour
-            )
+                K2 * pi3 * np.float_power(densityratio, exptwo),
+                expthree
+            ),
+            expfour
         )
-        # New implementation, correct to Holsapple (1993,
-        # doi:10.1146/annurev.ea.21.050193.002001)
-        # piV = K1 * np.float_power(
-        #     (pi2 * np.float_power(densityratio, expone)) +
-        #     np.float_power(
-        #         K2 * pi3 * np.float_power(densityratio, exptwo),
-        #         expthree
-        #     ),
-        #     expfour
-        # )
         V = (masses * piV) / targdensity  # m3 for crater
         rim_radius = Kr * np.float_power(V, (1 / 3))
 
