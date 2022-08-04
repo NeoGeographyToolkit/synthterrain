@@ -528,8 +528,8 @@ class Grun(Interp_Distribution):
         if "b" in kwargs:
             if kwargs["b"] > max(diameters):
                 raise ValueError(
-                    "The upper bound of the support of the distribution, b, must "
-                    f"be <= {max(diameters)}."
+                    "The upper bound of the support of the distribution, b, "
+                    f" must be <= {max(diameters)}."
                 )
         else:
             kwargs["b"] = max(diameters)
@@ -638,7 +638,7 @@ class Grun(Interp_Distribution):
         velocity=20000.0,  # m/s
         alpha=45.0,  # impact angle degrees
         nu=(1.0 / 3.0),  # ~1/3 to 0.4
-        mu=0.41,  # ~0.4 to 0.55
+        mu=0.43,  # ~0.4 to 0.55
         K1=0.132,
         K2=0.26,
         Kr=(1.1 * 1.3)  # Kr and KrRim
