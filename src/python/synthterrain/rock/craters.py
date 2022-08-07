@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import scipy
+from scipy.stats import norm
 import numpy as np
+import numpy.matlib
 import matplotlib.pyplot as plt
 import xml.etree.ElementTree as ET
 from synthterrain.rock import utilities
@@ -93,9 +95,9 @@ class Craters:
         # @param positions: list of positions to be filtered
         #
         def createPositionsFilter(self, positions):
-            f = (positions[:,0] < 0 | positions[:,0] > self.terrain.dem_size[0] | 
-                 positions[:,1] < 0 | positions[:,1] > self.terrain.dem_size[1])
-            return not f
+            f = (np.less(positions[:,0], 0) | np.greater(positions[:,0], self.terrain.dem_size[0]) | 
+                 np.less(positions[:,1], 0) | np.greater(positions[:,1], self.terrain.dem_size[1]))
+            return np.logical_not(f)
         
         #------------------------------------------
         # Generates a crater distribution XML file.
@@ -120,78 +122,84 @@ class Craters:
             self.ages = []
             self.is_new = []
 
-            self.diameter_range_m = range(self.MIN_DIAMETER_M, self.DELTA_DIAMETER_M, self.MAX_DIAMETER_M)
+            self.diameter_range_m = np.arange(self.MIN_DIAMETER_M, self.MAX_DIAMETER_M+self.DELTA_DIAMETER_M, self.DELTA_DIAMETER_M)
 
+            # TODO: Something is wrong with the numbers here!
             craters_per_sq_km = Craters.calculateDensity(self.diameter_range_m)
             rev_cum_dist = craters_per_sq_km * 1e-6 # Convert sq_km to sq_m
             rev_cum_dist_per_area = self.terrain.area_sq_m * rev_cum_dist
-            num_craters = round(rev_cum_dist_per_area(1))
+            num_craters = np.round(rev_cum_dist_per_area[0])
+            num_craters = 100 # TODO!!!!
             num_craters_to_sample = num_craters
             print('\nEstimated number of craters in the terrain: %d\n' % num_craters)
 
-            existing_hist_per_area = np.zeros(1, len(self.diameter_range_m))
-            if read_existing_craters:
+            existing_hist_per_area = np.zeros((1, len(self.diameter_range_m)))
+            if read_existing_craters: # TODO: Move into a function
                 self.readExistingCraterFile(self.INPUT_CRATER_FILE)
                 # Subtract the origin offset from the input craters, 
                 # so the bottom left corner is at (0,0)
+                print('self.terrain.origin = ' + str(self.terrain.origin))
                 self.exist_positions_xy = self.exist_positions_xy - self.terrain.origin
                 print('Total number of user-specified craters: %d\n' % len(self.exist_diameters_m))
-                # filter out craters that fall outside of the terrain bounds
-                idx = self.createPositionsFilter(self.exist_positions_xy)
-                self.exist_positions_xy = self.exist_positions_xy[idx, :]
-                self.exist_diameters_m = self.exist_diameters_m[idx]
-                self.exist_ages = self.exist_ages[idx]
-                num_craters_to_sample = num_craters - len(self.exist_diameters_m)
-                print('Filtered Number of user-specified craters: %d\n' % len(self.exist_diameters_m))
+                # Filter out craters that fall outside of the terrain bounds
+                idx_bool = self.createPositionsFilter(self.exist_positions_xy) # TODO: Is this working?
+                idx = np.nonzero(idx_bool)[0]
+                if not idx: # We didn't actually get any new data
+                    read_existing_craters = False
+                else:
+                    self.exist_positions_xy = self.exist_positions_xy[idx, :]
+                    self.exist_diameters_m = self.exist_diameters_m[idx]
+                    self.exist_ages = self.exist_ages[idx]
+                    num_craters_to_sample = num_craters - len(self.exist_diameters_m)
+                    print('Filtered Number of user-specified craters: %d\n' % len(self.exist_diameters_m))
 
-                # TODO: Move bin right edges to bin centers?
-                existing_hist_per_area = np.histogram(self.exist_diameters_m, self.diameter_range_m)
-                existing_hist_per_area = np.append(existing_hist_per_area, 0)
+                    # TODO: Move bin right edges to bin centers?
+                    existing_hist_per_area = np.histogram(self.exist_diameters_m, self.diameter_range_m)[0]
+                    existing_hist_per_area = np.append(existing_hist_per_area, 0)
 
-                # Plot existing crater locations
-                if self.PLOT_EXISTING_LOCATIONS:
-                    self.plotExistingLocations
+                    # Plot existing crater locations
+                    if self.PLOT_EXISTING_LOCATIONS:
+                        self.plotExistingLocations
 
-                # Perform guided interpolation of data
-                # Use the provided rev_cum_dist to guide the interpolation
-                non_zero_indices = np.any(existing_hist_per_area != 0).nonzero()
-                non_zero_indices = np.append(non_zero_indices, len(existing_hist_per_area))   # append the last index
-                last_cur = non_zero_indices[0] # The detection algorithm can not detected crater sizes below 4.
-                                               # By intializing last_cur to non_zero_indices[0] rather than zero 
-                                               # we interpolate values starting with 4 and onward
-                for i in range(0,len(non_zero_indices)):
-                    cur = non_zero_indices(i + 0)
-                    nxt = non_zero_indices(i + 1)
-                    value = existing_hist_per_area(cur)
-                    ## distribute value of existing_hist_per_area(cur) according to
-                    ## one of the following methods:
+                    # Perform guided interpolation of data
+                    # Use the provided rev_cum_dist to guide the interpolation
+                    non_zero_indices = np.any(existing_hist_per_area != 0).nonzero()
+                    non_zero_indices = np.append(non_zero_indices, len(existing_hist_per_area))   # append the last index
+                    last_cur = non_zero_indices[0] # The detection algorithm can not detected crater sizes below 4.
+                                                  # By intializing last_cur to non_zero_indices[0] rather than zero 
+                                                  # we interpolate values starting with 4 and onward
+                    for i in range(0,len(non_zero_indices)-1):
+                        cur = non_zero_indices[i + 0]
+                        nxt = non_zero_indices[i + 1]
+                        value = existing_hist_per_area[cur]
+                        ## distribute value of existing_hist_per_area(cur) according to
+                        ## one of the following methods:
 
-                    ## Method A) equally
-                    if self.INPUT_CRATER_INTERPOLATE == "uniform":
-                        existing_hist_per_area[cur:nxt-1] = value / (nxt - cur)
+                        ## Method A) equally
+                        if self.INPUT_CRATER_INTERPOLATE == "uniform":
+                            existing_hist_per_area[cur:nxt] = value / (nxt - cur)
 
-                    ## Method B) guided interpolation infleunced by the rev_cum_dist
-                    elif self.INPUT_CRATER_INTERPOLATE == "guided":
-                        weights = rev_cum_dist[cur:nxt-1] / np.sum(rev_cum_dist[cur:nxt-1])
-                        existing_hist_per_area[cur:nxt-1] = weights * value
+                        ## Method B) guided interpolation infleunced by the rev_cum_dist
+                        elif self.INPUT_CRATER_INTERPOLATE == "guided":
+                            weights = rev_cum_dist[cur:nxt] / np.sum(rev_cum_dist[cur:nxt])
+                            existing_hist_per_area[cur:nxt] = weights * value
 
-                    ## Method C) same as above but treat `cur` as the center
-                    elif self.INPUT_CRATER_INTERPOLATE == "guided_centered":
-                        m1 = (last_cur + cur) / 2
-                        m2 = (cur + nxt) / 2
-                        last_cur = cur
-                        weights = rev_cum_dist[m1:m2-1] / sum(rev_cum_dist[m1:m2-1])  # weights according to Env Spec
-                        existing_hist_per_area[m1:m2-1] = weights * value
+                        ## Method C) same as above but treat `cur` as the center
+                        elif self.INPUT_CRATER_INTERPOLATE == "guided_centered":
+                            m1 = (last_cur + cur) / 2
+                            m2 = (cur + nxt) / 2
+                            last_cur = cur
+                            weights = rev_cum_dist[m1:m2-1] / sum(rev_cum_dist[m1:m2-1])  # weights according to Env Spec
+                            existing_hist_per_area[m1:m2-1] = weights * value
 
             env_spec_hist_in_area = utilities.revCDF_2_histogram(rev_cum_dist_per_area)
 
             combined_hist_per_area = env_spec_hist_in_area - existing_hist_per_area
-            combined_hist_per_area = max(combined_hist_per_area, 0)  # clamp histogram values to a zero as min
-
+            # clamp histogram values to a zero as min
+            combined_hist_per_area = np.where(combined_hist_per_area > 0, combined_hist_per_area, 0)
 
             print('\nNumber of craters to sample..: ' + str(num_craters_to_sample))
-            prob_dist = combined_hist_per_area / sum(combined_hist_per_area) # convert the histogram to a probablity dist
-
+            prob_dist = combined_hist_per_area / np.sum(combined_hist_per_area) # convert the histogram to a probablity dist
 
             # Given the number of craters, we now sample 
             # the sizes of these craters from the distribution
@@ -200,7 +208,8 @@ class Craters:
                 self.diameter_range_m,
                 num_craters_to_sample,
                 True, # Choose with replacement
-                prob_dist)
+                prob_dist.squeeze())
+
             #if len(self.diameters_m,1) > len(self.diameters_m,2): # TODO!
             #    # Degenerate case where we have 1 item and 
             #    # return a column instead of row vector
@@ -211,58 +220,66 @@ class Craters:
                 self.diameters_m,
                 self.diameter_range_m)
 
-            idx = np.any(self.diameter_range_m >= self.BLOCK_GEN_CSIZE,1).nonzero()
-            num_large_craters = sum(sample_distribution[idx:])
+            indices = np.any(self.diameter_range_m >= self.BLOCK_GEN_CSIZE).nonzero()
+            if not indices:
+                raise Exception('No diameters >= self.BLOCK_GEN_CSIZE!')
+            idx = indices[0]
+            num_large_craters = sum(sample_distribution[0][idx])
             print('\nNumber of craters >= %dm in diameter: %d\n'
                   % (self.BLOCK_GEN_CSIZE, num_large_craters))
 
             # Plot crater diameter sample distribution
             if self.PLOT_DIAMETER_DISTRIBUTION:
-                ideal_distribution = num_craters_to_sample * prob_dist
+                ideal_distribution = num_craters_to_sample * prob_dist.squeeze()[:-1]
                 self.plotDiameterDistribution(
                     ideal_distribution,
-                    sample_distribution)
+                    sample_distribution[0])
 
             # For crater diameters, randomize delta size between 
             # steps to get a continuous size distribution.
-            self.diameters_m = self.diameters_m + self.DELTA_DIAMETER_M * np.rand(1, num_craters_to_sample)
+            a = np.random.rand(1, num_craters_to_sample)
+            self.diameters_m = self.diameters_m + self.DELTA_DIAMETER_M * a
+            self.diameters_m = self.diameters_m.squeeze()
             
             # Crater positions are uniform (sizes are not)
             # Crater positions are drawn from a uniform distribution
             # over the terrain. Crater sizes are drawn from a power-law
             # distribution in the VIPER environmental spec.
-            self.positions_xy = np.rand(num_craters_to_sample, 2) * \
-                np.repmat(self.terrain.dem_size, [num_craters_to_sample, 1])
+            self.positions_xy = np.random.rand(num_craters_to_sample, 2) * \
+                np.matlib.repmat(self.terrain.dem_size, num_craters_to_sample, 1)
 
             # Add generated craters to existing list to get total craters
             if read_existing_craters:
-                self.diameters_m = np.concatenate(1, self.diameters_m, self.exist_diameters_m)
-                self.positions_xy = np.concatenate(1, self.positions_xy, self.exist_positions_xy)
-                self.is_new = [np.ones(num_craters_to_sample,1), np.zeros(len(self.exist_diameters_m),1)]
+                self.diameters_m = np.concatenate((self.diameters_m, self.exist_diameters_m))
+                self.positions_xy = np.concatenate((self.positions_xy, self.exist_positions_xy))
+                self.is_new = np.concatenate((np.ones((num_craters_to_sample,1)),
+                                              np.zeros((len(self.exist_diameters_m),1))))
                 
                 # NOTE: we currently have no intel on the age of detected craters
                 #   so for now we use the same distribution for generated + existing
                 #   instead of concating things:
                 #       self.ages = cat(1, self.ages(:), self.exist_ages(:))
                 self.ages = Craters.generateCraterAgeDiameterWise(self.diameters_m)
-                combined_ages = np.concatenate(1, np.zeros(num_craters_to_sample, 1), self.exist_ages)
-                self.ages = self.ages * (not combined_ages) + combined_ages
+                combined_ages = np.concatenate((np.zeros(num_craters_to_sample), self.exist_ages))
+                self.ages = np.where(combined_ages == 0, self.ages, combined_ages)
             else:
-                self.is_new = np.ones(num_craters_to_sample, 1)
+                self.is_new = np.ones((num_craters_to_sample, 1))
                 self.ages = Craters.generateCraterAgeDiameterWise(self.diameters_m)
             
             # Sort by age (oldest first)
-            [self.ages, idx] = self.ages.sort(reverse=True) # descending order
-            self.diameters_m = self.diameters_m(idx)
+            idx = np.flip(np.argsort(self.ages)) # TODO: Don't duplicate work
+            self.ages = np.flip(np.sort(self.ages))
+            #[self.ages, idx] = self.ages # descending order
+            self.diameters_m = self.diameters_m[idx]
             self.positions_xy = self.positions_xy[idx, :]
-            self.is_new = self.is_new(idx)
+            self.is_new = self.is_new[idx]
             
 
             idx = self.createPositionsFilter(self.positions_xy)
-            self.diameters_m = self.diameters_m(idx)
+            self.diameters_m = self.diameters_m[idx]
             self.positions_xy = self.positions_xy[idx, :]
-            self.ages = self.ages(idx)
-            self.is_new = self.is_new(idx)
+            self.ages = self.ages[idx]
+            self.is_new = self.is_new[idx]
             
             # Select ejecta craters
             # Start with craters of diameter BLOCK_GEN_CSIZE and larger.
@@ -315,12 +332,14 @@ class Craters:
             fig = plt.figure(2)
             ax = fig.add_subplot(111)
             ax.clear()
-            ax.loglog(self.diameter_range_m, ideal_distribution, 'r+')
-            ax.loglog(self.diameter_range_m, sample_distribution, 'bo')
+            print(self.diameter_range_m[:-1])
+            print(ideal_distribution)
+            ax.loglog(self.diameter_range_m[:-1], ideal_distribution, 'r+')
+            ax.loglog(self.diameter_range_m[:-1], sample_distribution, 'bo')
             ax.set_xlabel('Crater Diameter (m)')
             ax.set_ylabel('Crater Count')
             ax.set_title('Ideal vs Sampled Crater Diameter Distributions')
-            ax.set_legend({'Ideal', 'Sampled'})
+            ax.legend(['Ideal', 'Sampled'])
         
         #------------------------------------------
         # Read existing craters from XML input file
@@ -333,17 +352,22 @@ class Craters:
             tree = ET.parse(filename)
             root = tree.getroot()
 
+
+            self.exist_positions_xy = None
+            self.exist_diameters_m = []
+            self.exist_ages = []
+
             for x in root:
-                print(x)
-                raise Exception('TODO')
-
-            #tmp = textscan(fid, '    <CraterData x="#f" y="#f" rimRadius="#f" freshness="#f" isGenerated="#d"/>\n', inf) 
-
-            #self.exist_positions_xy[:,1] = tmp{1}
-            #self.exist_positions_xy[:,2] = tmp{2}
-            #self.exist_diameters_m = tmp{3} * 2
-            #self.exist_ages = tmp{4}
-#             isGen = tmp{5}
+                xy = np.array([[float(x.attrib['x']), float(x.attrib['y'])]])
+                if self.exist_positions_xy is not None:
+                    self.exist_positions_xy = np.concatenate((self.exist_positions_xy, xy), axis=0)
+                else:
+                    self.exist_positions_xy = xy
+                self.exist_diameters_m.append(float(x.attrib['rimRadius']) * 2)
+                self.exist_ages.append(float(x.attrib['freshness']))
+            self.exist_diameters_m = np.array(self.exist_diameters_m)
+            self.exist_ages = np.array(self.exist_ages)
+#             isGen = x.attrib['isGenerated']
      
         #------------------------------------------
         # Write the output XML crater distribution file
@@ -355,36 +379,26 @@ class Craters:
         def writeXml(self):
             if not self.OUTPUT_FILE:
                 return
+            root = ET.Element("CraterList", name="UserCraters")
 
-            # TODO: Verify format
-            #fid.write('<?xml version="1.0" encoding="UTF-8"?>\n')
-            #fid.write('<CraterList name="UserCraters">\n')
-            root = ET.Element("CraterList")
-            #doc = ET.SubElement(root, "CraterList")
-
-            #note we divide crater size by 2 to convert between diameter and radius
-            c = ET.Element("CraterData",
-                           x=self.positions_xy[:,0] + self.terrain.origin[0],
-                           y=self.positions_xy[:,1] + self.terrain.origin[1],
-                           rimRadius=self.diameters_m/2,
-                           freshness=self.ages,
-                           isGenerated=self.is_new)
-            root.append(c)
-              
-            ##note we divide crater size by 2 to convert between diameter and radius
-            #fid.write('    <CraterData x="%f" y="%f" rimRadius="%f" freshness="%f" isGenerated="%d"/>\n' %
-            #    (self.positions_xy[:,0) + self.terrain.origin[0],
-            #     self.positions_xy[:,1) + self.terrain.origin[1],
-            #     self.diameters_m(:)/2,
-            #     self.ages,
-            #     self.is_new)')
-
+            for i in range(0, len(self.diameters_m)):
+                #note we divide crater size by 2 to convert between diameter and radius
+                c = ET.Element("CraterData",
+                              x=str(self.positions_xy[i,0] + self.terrain.origin[0]),
+                              y=str(self.positions_xy[i,1] + self.terrain.origin[1]),
+                              rimRadius=str(self.diameters_m[i]/2),
+                              freshness=str(self.ages[i]),
+                              isGenerated=str(self.is_new[i][0]>0))
+                root.append(c)
             tree = ET.ElementTree(root)
+            ET.indent(tree, space="  ", level=0)
             try:
+                print('Writing: ' + self.OUTPUT_FILE)
                 with open(self.OUTPUT_FILE, 'wb') as xfile:
                     tree.write(xfile)
             except Exception as e:
               print('\nUnable to write file %s\n' % self.OUTPUT_FILE)
+              print(e)
               return
 
 
@@ -406,18 +420,13 @@ class Craters:
             if any(diameter_m) <= 0:
                 raise Exception('Crater diameter cannot be <= 0')
 
-            dl = diameter_m(diameter_m <= 80)
-            dh = diameter_m(diameter_m >  80)
+            dl = diameter_m[diameter_m <= 80]
+            dh = diameter_m[diameter_m >  80]
 
-            nl_km =  29174 * dl ^ (-1.92)
-            nh_km = 156228 * dh ^ (-2.389)
+            nl_km = np.power(29174 * dl, -1.92)
+            nh_km = np.power(156228 * dh, -2.389)
 
-            #if isrow(diameter_m):
-            #    num_craters_per_square_km = [nl_km, nh_km]
-            #else:
-            #    num_craters_per_square_km = [nl_km, nh_km]
-            num_craters_per_square_km = [nl_km, nh_km]
-            # TODO
+            num_craters_per_square_km = np.append(nl_km, nh_km)
             return num_craters_per_square_km
 
         #------------------------------------------
@@ -430,9 +439,10 @@ class Craters:
         def sampleDepthToDiameterForSLCs(sample_count):
             # Mean and Std can be found in Table 39. d/D Parameters for SLCs
             xs = np.linspace(0, 1, 1000)
-            fresh_prob_fit = scipy.norm.pdf(xs, 0.14, 0.035)
+            fresh_prob_fit = norm.pdf(xs, 0.14, 0.035)
+            fresh_prob_fit = fresh_prob_fit / np.sum(fresh_prob_fit)
             Y = np.random.choice(len(fresh_prob_fit), sample_count, True, fresh_prob_fit)
-            dD = xs(Y)
+            dD = xs[Y]
             return dD
 
         #------------------------------------------
@@ -458,7 +468,10 @@ class Craters:
             # | 1.0       |   0.2731  |
             #
             # For simplicity the mapping is assumed to be linear
-            freshness = min(max(1.0 / 0.2731 * dD, 0), 1.0)
+            inner = np.where(1.0 / 0.2731 * dD > 0, 1.0 / 0.2731 * dD, 0)
+            freshness = np.where(inner < 1.0, inner, 1.0)
+            print(freshness)
+            print(freshness.shape)
             return freshness
 
         #------------------------------------------
@@ -504,18 +517,19 @@ class Craters:
             # the environmental spec VIPER-MSE-SPEC-001 
             
             slope_types = [
-                'very steep slope'
-                'steep slope'
-                'moderate slope'
-                'gentle slope'
+                'very steep slope',
+                'steep slope',
+                'moderate slope',
+                'gentle slope',
                 'very gentle slope']
             
             slope_weights = [0.5, 2.5, 17, 30, 50]
+            slope_weights = slope_weights / np.sum(slope_weights)
             
             sampled_slope_types = np.random.choice(
                                    slope_types,
                                    sample_count,
-                                   True
+                                   True,
                                    slope_weights)
 
             # convert sampled_slope_types to a d/D
@@ -532,21 +546,22 @@ class Craters:
             ax.clear()
 
             #[f,xi] = ksdensity(data)
+            print(data)
             kde = scipy.stats.gaussian_kde(data)
             x = np.linspace(data.min(), data.max(), 100)
             f = kde(x)
 
             ax.plot(f)
-            ax.title('Small crater (diameter < 100m) depth-to-diameter distributions')
+            ax.set_title('Small crater (diameter < 100m) depth-to-diameter distributions')
             ax.set_xlabel('d/D')
             ax.set_ylabel('# Probability')
             ax.set_xlim([0, 0.4])
             m = np.mean(data) # should be equal to ~0.14
             s = np.std(data)  # should be equal to ~0.035
             l = [m-3.0*s, m-2.0*s, m-1.0*s, m+1.0*s, m+2.0*s, m+3.0*s]
-            b = {'3σ low' '' '' '' '' '3σ high'}
+            b = ['3σ low', '', '', '', '', '3σ high']
             for i in range(0,len(l)):
-                ax.xline(l(i), '--r', b(i))
+                ax.axvline(l[i], color='r', ls='--', label=b[i])
 
 
         #------------------------------------------
@@ -561,22 +576,29 @@ class Craters:
         #
         def generateCraterAgeDiameterWise(diameter_m):
             print('generateCraterAgeDiameterWise(%d)\n' % len(diameter_m))
-            ages = np.zeros(len(diameter_m), 1)
+            ages = np.zeros((len(diameter_m), 1))
 
             # determine the number of craters that are considered SLC (d < 100m)
-            slcs_idx = np.any(diameter_m < 100).nonzero()
+            slcs_idx = (diameter_m < 100).nonzero()[0]
+            print(slcs_idx)
             slcs_count = len(slcs_idx)
             print('Total SLCs: %d\n' % slcs_count)
             sampled_slcs_dD = Craters.sampleDepthToDiameterForSLCs(slcs_count)
-            ages[slcs_idx] = Craters.mapDepthToDiameterToFreshness(sampled_slcs_dD)
+            result = Craters.mapDepthToDiameterToFreshness(sampled_slcs_dD)
+            for r, i in zip(result, slcs_idx):
+                ages[i] = r
             Craters.plotDepthToDiameterForSLCs(sampled_slcs_dD)
 
             # Only an upper limit is defined for non-SLCs but is not needed
-            # since we don't typicall generate craters larger than 500 m.
-            # A lower limit, however, is needed for the implemetnation
-            non_slcs_idx = np.any(diameter_m >= 100).nonzero() # and diameter_m < 1 km
+            # since we don't typically generate craters larger than 500 m.
+            # A lower limit, however, is needed for the implementation
+            non_slcs_idx = np.any(diameter_m >= 100).nonzero()[0] # and diameter_m < 1 km
             non_slcs_count = len(non_slcs_idx)
             print('Total non-SLCs: %d\n' % non_slcs_count)
-            sampled_non_slcs_dD = Craters.sampleDepthToDiameterForNonSLCs(non_slcs_count)
-            ages[non_slcs_idx] = Craters.mapDepthToDiameterToFreshness(sampled_non_slcs_dD)
-            return ages
+            if non_slcs_count > 0:
+                sampled_non_slcs_dD = Craters.sampleDepthToDiameterForNonSLCs(non_slcs_count)
+                print(sampled_non_slcs_dD)
+                result = Craters.mapDepthToDiameterToFreshness(sampled_non_slcs_dD)
+                for r, i in zip(result, non_slcs_idx):
+                    ages[i] = r
+            return ages.squeeze()

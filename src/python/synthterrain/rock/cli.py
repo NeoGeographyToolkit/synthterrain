@@ -21,6 +21,7 @@ from shapely.geometry import box
 
 import synthterrain.util as util
 
+from synthterrain.rock import craters
 from synthterrain.rock import terrain
 from synthterrain.rock import rocks
 from synthterrain.rock import inter_crater_rocks
@@ -68,11 +69,20 @@ def main():
     # Do generic rock distro across bbox.
     print('TERRAIN')
     t = terrain.Terrain()
-    t.setOrigin(0, 0) #TODO
+    t.setOrigin(-660, -435) # TODO: This is actually the corner?
     t.setXsize(200) #TODO
     t.setYsize(200) #TODO
     print('TERRAIN generate')
     t.generate()
+
+    print('CRATERS')
+    crater_file = '/usr/local/home/smcmich1/repo/synthterrain/craters_short.xml'
+    c = craters.Craters(t)
+    #c.readExistingCraterFile(crater_file)
+    #c.INPUT_CRATER_FILE = crater_file
+    c.OUTPUT_FILE = '/usr/local/home/smcmich1/repo/synthterrain/craters_short_copy.xml'
+    c.generate()
+    #raise Exception('DEBUG')
 
     #print('InterCraterRocks')
     #inter = inter_crater_rocks.InterCraterRocks(t)
@@ -87,7 +97,8 @@ def main():
     # This also writes the output file
     print('GENERATE')
     #inter.generate()
-    intra.generate()
+    intra.generate(c)
+    raise Exception('DEBUG')
 
     # TODO: Pick one or more of the existing functions
     if True:#args.plot: TODO

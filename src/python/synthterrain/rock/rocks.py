@@ -125,6 +125,7 @@ class Rocks:
     #
     def plotLocations(self, figureNumber):
         num_rocks = len(self._diameters_m)
+        print(self.positions_xy)
         xy = utilities.downSample(self.positions_xy, 20000)[0]
         color = 'b'
 

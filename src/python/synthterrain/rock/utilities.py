@@ -37,7 +37,7 @@ def histogram_2_revCDF(h):
 # 
 def revCDF_2_histogram(rev_cdf):
     h = rev_cdf[0:-1] - rev_cdf[1:]
-    h = [h, 0]
+    h = np.append(h, 0)
     return h
 
 #------------------------------------------
