@@ -97,14 +97,12 @@ class IntraCraterRocks(rocks.Rocks):
         print('\nDelta  rock diameter: ' + str(self.DELTA_DIAMETER_M) + ' m')
         print('\nMax    rock diameter: ' + str(self.MAX_DIAMETER_M) + ' m')
         
-        # TODO: Work needs to be done here!
-        self.sampleRockLocations = None
-        self.sampleRockDiameters = None
-        self.placeRocks = None
-
-
-        #self._sampleRockLocations() # DEBUG
+        print('_sampleRockLocations')
+        self._sampleRockLocations()
+        print('_sampleRockDiameters')
         self._sampleRockDiameters()
+        print('_placeRocks')
+        self._placeRocks()
 
 
         if self.OUTPUT_FILE:
@@ -125,20 +123,31 @@ class IntraCraterRocks(rocks.Rocks):
         s = (self._terrain.dem_size[1], self._terrain.dem_size[0])
         self._location_probability_map = np.zeros(s, 'single')
 
-        s = self.craters.ejecta_crater_indices.shape
-        for i in range(0, s[0]*s[1]):
+        num_craters = len(self.craters['x'])
+        zero_sum_craters = 0
+        for i in range(0, num_craters):
 
             # self is the euclidean distance from the center of the crater
-            m_pos = self.craters.positions_xy[self.craters.ejecta_crater_indices[i], :] # 1x2 row vector
-            d = math.sqrt(
-                (self._terrain.xs - m_pos[0])^2 +
-                (self._terrain.ys - m_pos[1])^2) # sizeof dem
+            #m_pos = self.craters.positions_xy[self.craters.ejecta_crater_indices[i], :] # 1x2 row vector
+            m_pos = np.array([self.craters['x'][i], self.craters['y'][i]])
+            d = np.sqrt(
+                np.power(self._terrain.xs - m_pos[0], 2) +
+                np.power(self._terrain.ys - m_pos[1], 2)) # sizeof dem
 
             # Convert diameter to radius for easier computation of distance (meters)
-            crater_radius_m = self.craters.diameters_m[self.craters.ejecta_crater_indices[i]] / 2
+            #crater_radius_m = self.craters.diameters_m[self.craters.ejecta_crater_indices[i]] / 2
+            crater_radius_m = self.craters['diameter'][i] / 2
 
             # Generate an exponentially decaying ejecta field around a crater
-            outer_probability_map = self.outerProbability[d, crater_radius_m] # sizeof dem
+            #print('')
+            #print(d)
+            #print(crater_radius_m)
+            outer_probability_map = self._outerProbability(d, crater_radius_m) # sizeof dem
+            EPSILON = 0.001
+            if np.sum(outer_probability_map) < EPSILON:
+                #print('WARNING: outer_probability_map sum for crater ' + str(i) + ' is zero!')
+                zero_sum_craters += 1
+                continue
 
             # Further than 1 crater radius from the rim, the ejecta field goes to 0
             outer_probability_map = np.where(
@@ -147,7 +156,7 @@ class IntraCraterRocks(rocks.Rocks):
               outer_probability_map) # sizeof dem
 
             # The inside of the crater has very low uniform ejecta
-            inner_probability_map = self.innerProbability(d, crater_radius_m) # sizeof dem, logical array
+            inner_probability_map = self._innerProbability(d, crater_radius_m) # sizeof dem, logical array
             inner_strength = 0.05 * outer_probability_map.max()
             outer_probability_map = np.where(
                 inner_probability_map == 1,
@@ -156,15 +165,21 @@ class IntraCraterRocks(rocks.Rocks):
             # Do we need a min(densities inner) here to check against falloff > 1
             # which increases the center rate?
 
+            # TODO: Is this math correct?  Age is high positive number
             # The rock density is inverse of the crater age,
             # which simulates buried rocks from old craters
-            age_diff = 1 - self.craters.ages(self.craters.ejecta_crater_indices(i));
+            #age_diff = 1 - self.craters.ages(self.craters.ejecta_crater_indices(i));
+            age_diff = 1 - self.craters['age'][i]
+            #print('age_diff')
+            #print(age_diff)
+            #print('outer_probability_map')
+            #print(outer_probability_map)
 
             # Add densities to total map
             # Rocks at interior of crater replace, ejecta field adds
             self._location_probability_map = (self._location_probability_map + 
-                age_diff^self.ROCK_AGE_DECAY * outer_probability_map)
-
+                np.power(age_diff, self.ROCK_AGE_DECAY) * outer_probability_map)
+        print('zero sum crater percentage = ' + str(zero_sum_craters / num_craters))
     
     #------------------------------------------
     # Creates a probability distribution of 
@@ -174,6 +189,8 @@ class IntraCraterRocks(rocks.Rocks):
     # @param self: 
     #
     def _sampleRockDiameters(self):
+
+        # TODO: There is a lot of duplicated code in inter_crater_rocks.py!!!
         
         intercrater_area_sq_m = self._terrain.area_sq_m * self.ROCK_AREA_SCALAR
 
@@ -181,7 +198,7 @@ class IntraCraterRocks(rocks.Rocks):
         threshold_values = np.where(self._location_probability_map > eps, self._location_probability_map, 0)
         direct_rock_area_sq_m = np.sum(threshold_values)
 
-        # Calculate the numer of rocks generated by craters given the ejecta blanket
+        # Calculate the number of rocks generated by craters given the ejecta blanket
         # area. Use some bounds to limit the amount of ejecta generated to within
         # expectation
         if direct_rock_area_sq_m < 0.02 * intercrater_area_sq_m:  # at least 2# of the area is high blocky
@@ -191,11 +208,11 @@ class IntraCraterRocks(rocks.Rocks):
         else:
             intracrater_area_sq_m = direct_rock_area_sq_m
 
-        rev_cum_dist = rocks.Rocks.calculateDensity(
-            self.diameter_range_m,
+        rev_cum_dist = rocks.calculateDensity(
+            self._diameter_range_m,
             self.ROCK_DENSITY_PROFILE)
 
-        num_rocks = np.round(rev_cum_dist[0] * intracrater_area_sq_m)
+        num_rocks = int(np.round(rev_cum_dist[0] * intracrater_area_sq_m))
 
         print('\nNumber of Rocks: ' + str(num_rocks))
 
@@ -207,47 +224,50 @@ class IntraCraterRocks(rocks.Rocks):
 
         # Sample the rocks sizes randomly
         self.diameters_m = self._terrain.random_generator.choice(
-            self.diameter_range_m,
+            self._diameter_range_m,
             num_rocks,
             False,
             prob_dist)
-        self.diameters_m = np.asarray(self.diameters_m)
+        self._diameters_m = np.asarray(self._diameters_m)
 
         # TODO CHECK EDGES
         # Compare sample to ideal distribution
-        prior_sample_hist = np.hist(
-            self.diameters_m,
-            self.diameter_range_m)
+        prior_sample_hist = np.histogram(
+            self._diameters_m,
+            self._diameter_range_m)
 
         # If the random terrain has too many or too few 
         # rocks of a certain size, we replace those rocks 
         # with the expected number of rocks that size.
-        ideal_sample_hist = num_rocks * prob_dist
+        ideal_sample_hist = num_rocks * prob_dist[:-1]
 
-        rock_dist_error = abs(ideal_sample_hist - prior_sample_hist)
+        rock_dist_error = abs(ideal_sample_hist - prior_sample_hist[0])
+        print('print(self._diameters_m) = ' + str(self._diameters_m))
         for i in range(0,len(rock_dist_error)):
             if rock_dist_error[i] > np.round(self.SIGMA_FRACTION * ideal_sample_hist[i]):
-                ideal_count = np.round(ideal_sample_hist[i])
-                current_size = self.diameter_range_m[i]
+                ideal_count = int(np.round(ideal_sample_hist[i]))
+                current_size = self._diameter_range_m[i]
 
                 # get rid of any ideal size craters
-                self.diameters_m = self.diameters_m[self.diameters_m != current_size]
+                self._diameters_m = self._diameters_m[self._diameters_m != current_size]
 
                 # add correct number of ideal size craters
-                self.diameters_m = [[self.diameters_m],
-                                    [current_size * np.ones((ideal_count,1))]]
+                #self._diameters_m = [[self._diameters_m],
+                #                    [current_size * np.ones((ideal_count,1))]]
+                new_data = current_size * np.ones((ideal_count,))
+                self._diameters_m = np.concatenate((self._diameters_m, new_data))
 
         # TODO CHECK EDGES
-        final_sample_hist = np.hist(
-            self.diameters_m,
-            self.diameter_range_m)
+        final_sample_hist = np.histogram(
+            self._diameters_m,
+            self._diameter_range_m)
 
         if self.PLOT_DIAMETER_DISTRIBUTION:
             self.plotDiameterDistributions(
                 22,
                 ideal_sample_hist,
-                prior_sample_hist,
-                final_sample_hist)
+                prior_sample_hist[0],
+                final_sample_hist[0])
 
     #------------------------------------------
     # Places rocks according to the location

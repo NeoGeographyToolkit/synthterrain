@@ -20,8 +20,9 @@ from matplotlib.pyplot import figure
 from shapely.geometry import box
 
 import synthterrain.util as util
+import synthterrain.crater as crater
 
-from synthterrain.rock import craters
+#from synthterrain.rock import craters
 from synthterrain.rock import terrain
 from synthterrain.rock import rocks
 from synthterrain.rock import inter_crater_rocks
@@ -76,12 +77,19 @@ def main():
     t.generate()
 
     print('CRATERS')
-    crater_file = '/usr/local/home/smcmich1/repo/synthterrain/craters_short.xml'
-    c = craters.Craters(t)
-    #c.readExistingCraterFile(crater_file)
-    #c.INPUT_CRATER_FILE = crater_file
-    c.OUTPUT_FILE = '/usr/local/home/smcmich1/repo/synthterrain/craters_short_copy.xml'
-    c.generate()
+    # Deprecated craters class
+    #crater_file = '/usr/local/home/smcmich1/repo/synthterrain/craters_short.xml'
+    #c = craters.Craters(t)
+    ##c.readExistingCraterFile(crater_file)
+    ##c.INPUT_CRATER_FILE = crater_file
+    #c.OUTPUT_FILE = '/usr/local/home/smcmich1/repo/synthterrain/craters_short_copy.xml'
+    #c.generate()
+
+    # New craters class
+    crater_file = '/usr/local/home/smcmich1/repo/synthterrain/crater_output.csv'
+    c = crater.from_file(crater_file)
+    print('Input crater info:')
+    print(c)
     #raise Exception('DEBUG')
 
     #print('InterCraterRocks')
@@ -98,7 +106,7 @@ def main():
     print('GENERATE')
     #inter.generate()
     intra.generate(c)
-    raise Exception('DEBUG')
+    #raise Exception('DEBUG')
 
     # TODO: Pick one or more of the existing functions
     if True:#args.plot: TODO

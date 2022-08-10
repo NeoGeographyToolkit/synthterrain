@@ -184,6 +184,12 @@ class Rocks:
         # the probability map is voxelized, so we'll get 
         # whole number positions from sampling it
         prob_map_sum = np.sum(self._location_probability_map)
+        print(self._location_probability_map)
+        print(self._location_probability_map.shape)
+        print(prob_map_sum)
+        EPSILON = 0.0001
+        if prob_map_sum < EPSILON:
+            raise Exception('The sum of the location probability map is zero!')
         flat_prob_map = self._location_probability_map.flatten() / prob_map_sum
         rock_positions_idx = self._terrain.random_generator.choice(
             range(0,len(flat_prob_map)),
