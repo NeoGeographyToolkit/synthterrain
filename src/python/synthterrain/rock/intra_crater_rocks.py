@@ -119,7 +119,6 @@ class IntraCraterRocks(rocks.Rocks):
     #
     def _sampleRockLocations(self):
         
-        # TODO
         s = (self._terrain.dem_size[1], self._terrain.dem_size[0])
         self._location_probability_map = np.zeros(s, 'single')
 
@@ -131,21 +130,17 @@ class IntraCraterRocks(rocks.Rocks):
             #m_pos = self.craters.positions_xy[self.craters.ejecta_crater_indices[i], :] # 1x2 row vector
             m_pos = np.array([self.craters['x'][i], self.craters['y'][i]])
             d = np.sqrt(
-                np.power(self._terrain.xs - m_pos[0], 2) +
-                np.power(self._terrain.ys - m_pos[1], 2)) # sizeof dem
+                np.power(self._terrain.xs + self._terrain.origin[0] - m_pos[0], 2) +
+                np.power(self._terrain.ys + self._terrain.origin[1] - m_pos[1], 2)) # sizeof dem
 
             # Convert diameter to radius for easier computation of distance (meters)
             #crater_radius_m = self.craters.diameters_m[self.craters.ejecta_crater_indices[i]] / 2
             crater_radius_m = self.craters['diameter'][i] / 2
 
             # Generate an exponentially decaying ejecta field around a crater
-            #print('')
-            #print(d)
-            #print(crater_radius_m)
             outer_probability_map = self._outerProbability(d, crater_radius_m) # sizeof dem
             EPSILON = 0.001
             if np.sum(outer_probability_map) < EPSILON:
-                #print('WARNING: outer_probability_map sum for crater ' + str(i) + ' is zero!')
                 zero_sum_craters += 1
                 continue
 
@@ -170,10 +165,11 @@ class IntraCraterRocks(rocks.Rocks):
             # which simulates buried rocks from old craters
             #age_diff = 1 - self.craters.ages(self.craters.ejecta_crater_indices(i));
             age_diff = 1 - self.craters['age'][i]
+            age_diff = 1 - 0.1 # TODO
             #print('age_diff')
             #print(age_diff)
             #print('outer_probability_map')
-            #print(outer_probability_map)
+            temp = np.power(age_diff, self.ROCK_AGE_DECAY) * outer_probability_map
 
             # Add densities to total map
             # Rocks at interior of crater replace, ejecta field adds
