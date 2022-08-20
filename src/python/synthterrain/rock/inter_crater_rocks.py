@@ -29,27 +29,6 @@ class InterCraterRocks(rocks.Rocks):
     # rock diameters that  will be generated (meters)
     MAX_DIAMETER_M = 2
 
-    # Rock density profile per the VIPER environmental
-    # spec. The currently implemented density profiles 
-    # are 'haworth', 'intercrater', and 'intercrater2'.
-    ROCK_DENSITY_PROFILE = 'intercrater2'
-
-    # Output XML filename
-    OUTPUT_FILE = []
-
-    #------------------------------------------
-    # Plotting Flags
-
-    PLOT_DENSITY_DISTRIBUTION = True # TODO FIX PLOT
-
-    PLOT_DIAMETER_DISTRIBUTION = True # TODO FIX PLOT
-
-    PLOT_LOCATION_PROBABILITY_MAP = True
-
-    PLOT_LOCATIONS = False
-
-    
-
     #------------------------------------------
     # Constructor
     # 
@@ -114,83 +93,16 @@ class InterCraterRocks(rocks.Rocks):
                 self._location_probability_map, 0)
     
     #------------------------------------------
-    # Creates a probability distribution of 
-    # rock diameters then samples that distribution
-    # to select diameters for all rocks
+    # Compute the number of rocks and the cumulative distribution
     # 
-    # @param self: 
+    # @param self:
     #
-    def _sampleRockDiameters(self):
-        
+    def _compute_num_rocks(self):
+
         # TODO: SHOULD WE SUBTRACT THE EJECTA CRATER AREA?
         intercrater_area_sq_m = self._terrain.area_sq_m * self.ROCK_AREA_SCALAR
 
         rev_cum_dist = rocks.calculateDensity(self._diameter_range_m, self.ROCK_DENSITY_PROFILE)
-
-        print('self._terrain.area_sq_m = ' + str(self._terrain.area_sq_m))
-        print('rev_cum_dist[0] = ' + str(rev_cum_dist[0]))
-        print('intercrater_area_sq_m = ' + str(intercrater_area_sq_m))
         num_rocks = round(rev_cum_dist[0] * intercrater_area_sq_m)
 
-        print('\nNumber of Rocks: ' + str(num_rocks))
-
-        if self.PLOT_DENSITY_DISTRIBUTION:
-            self.plotDensityDistribution(11, rev_cum_dist, self.ROCK_DENSITY_PROFILE);
-
-        # Generate probability distribution
-        prob_dist = utilities.revCDF_2_PDF(rev_cum_dist);
-
-        # TODO: num_rocks too high or something else?
-
-        # Sample the rocks sizes randomly
-        self._diameters_m = self._terrain.random_generator.choice(self._diameter_range_m,
-                                            num_rocks,
-                                            True, # Choose with replacement
-                                            prob_dist)
-        
-        # TODO: Move bin right edges to bin centers?
-        # Compare sample to ideal distribution
-        prior_sample_hist = np.histogram(self._diameters_m, self._diameter_range_m)
-
-        # If the random terrain has too many or too few 
-        # rocks of a certain size, we replace those rocks 
-        # with the expected number of rocks that size.
-        ideal_sample_hist = num_rocks * prob_dist[:-1]
-
-        rock_dist_error = abs(ideal_sample_hist - prior_sample_hist[0])
-        for i in range(0, len(rock_dist_error)):
-            if rock_dist_error[i] > np.round(self.SIGMA_FRACTION * ideal_sample_hist[i]):
-                ideal_count = int(ideal_sample_hist[i])
-                current_size = self._diameter_range_m[i]
-
-                # get rid of any ideal size craters
-                self._diameters_m = self._diameters_m[self._diameters_m != current_size]
-
-                # add correct number of ideal size craters
-                new_data = current_size * np.ones((ideal_count,))
-                self._diameters_m = np.concatenate((self._diameters_m, new_data))
-
-        # TODO: Move bin right edges to bin centers?
-        final_sample_hist = np.histogram(self._diameters_m, self._diameter_range_m)
-
-        if self.PLOT_DIAMETER_DISTRIBUTION:
-            self.plotDiameterDistributions(
-                12,
-                ideal_sample_hist,
-                prior_sample_hist[0],
-                final_sample_hist[0])
-
-    #------------------------------------------
-    # Places rocks according to the location
-    # probability distribution
-    # 
-    # @param self:
-    #
-    def _placeRocks(self):
-        if self.PLOT_LOCATION_PROBABILITY_MAP:
-            self.plotLocationProbabilityMap(13)
-
-        rocks.Rocks.placeRocks(self)
-
-        if self.PLOT_LOCATIONS:
-            self.plotLocations(14)
+        return num_rocks, rev_cum_dist

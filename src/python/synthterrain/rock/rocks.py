@@ -20,6 +20,25 @@ class Rocks:
     # terrain size itself
     ROCK_AREA_SCALAR = 1.0
 
+    # Rock density profile per the VIPER environmental
+    # spec. The currently implemented density profiles 
+    # are 'haworth', 'intercrater', and 'intercrater2'.
+    ROCK_DENSITY_PROFILE = 'intercrater2'
+
+    # Output XML filename
+    OUTPUT_FILE = []
+
+    #------------------------------------------
+    # Plotting Flags
+
+    PLOT_DENSITY_DISTRIBUTION = True
+
+    PLOT_DIAMETER_DISTRIBUTION = True
+
+    PLOT_LOCATION_PROBABILITY_MAP = True
+
+    PLOT_LOCATIONS = True
+
 
     # PROTECTED
 
@@ -170,14 +189,81 @@ class Rocks:
         fid.write(s),
         fid.write('</RockList>\n')
 
-   
+    # Must be defined by child classes
+    # @return num_rocks, rev_cum_dist
+    def _compute_num_rocks(self):
+        pass
+
+
+    #------------------------------------------
+    # Creates a probability distribution of 
+    # rock diameters then samples that distribution
+    # to select diameters for all rocks
+    # 
+    # @param self: 
+    #
+    def _sampleRockDiameters(self):
+
+        num_rocks, rev_cum_dist = self._compute_num_rocks()
+
+        if self.PLOT_DENSITY_DISTRIBUTION:
+            self.plotDensityDistribution(11, rev_cum_dist, self.ROCK_DENSITY_PROFILE);
+
+        # Generate probability distribution
+        prob_dist = utilities.revCDF_2_PDF(rev_cum_dist);
+
+        # TODO: num_rocks too high or something else?
+
+        # Sample the rocks sizes randomly
+        self._diameters_m = self._terrain.random_generator.choice(self._diameter_range_m,
+                                            num_rocks,
+                                            True, # Choose with replacement
+                                            prob_dist)
+
+        # TODO: Move bin right edges to bin centers?
+        # Compare sample to ideal distribution
+        prior_sample_hist = np.histogram(self._diameters_m, self._diameter_range_m)
+
+        # If the random terrain has too many or too few 
+        # rocks of a certain size, we replace those rocks 
+        # with the expected number of rocks that size.
+        ideal_sample_hist = num_rocks * prob_dist[:-1]
+
+        rock_dist_error = abs(ideal_sample_hist - prior_sample_hist[0])
+        for i in range(0, len(rock_dist_error)):
+            if rock_dist_error[i] > np.round(self.SIGMA_FRACTION * ideal_sample_hist[i]):
+                ideal_count = int(ideal_sample_hist[i])
+                current_size = self._diameter_range_m[i]
+
+                # get rid of any ideal size craters
+                self._diameters_m = self._diameters_m[self._diameters_m != current_size]
+
+                # add correct number of ideal size craters
+                new_data = current_size * np.ones((ideal_count,))
+                self._diameters_m = np.concatenate((self._diameters_m, new_data))
+
+        # TODO: Move bin right edges to bin centers?
+        final_sample_hist = np.histogram(self._diameters_m, self._diameter_range_m)
+
+        if self.PLOT_DIAMETER_DISTRIBUTION:
+            self.plotDiameterDistributions(
+                12,
+                ideal_sample_hist,
+                prior_sample_hist[0],
+                final_sample_hist[0])
+
+
     #------------------------------------------
     # Places rocks according to the location
     # probability distribution
     # 
     # @param self:
     #
-    def placeRocks(self):
+    def _placeRocks(self, figure_offset=0):
+
+        if self.PLOT_LOCATION_PROBABILITY_MAP:
+            self.plotLocationProbabilityMap(13 + figure_offset)
+
         num_rocks = len(self._diameters_m)
 
         # Sample rough probability map first 
@@ -211,6 +297,10 @@ class Rocks:
         rock_pos_y = np.mod(rock_pos_y + delta_pos[1,:], self._terrain.dem_size[1])
 
         self.positions_xy = np.stack((rock_pos_x, rock_pos_y))
+
+        if self.PLOT_LOCATIONS:
+            self.plotLocations(14 + figure_offset)
+
 
 # End class Rocks
 

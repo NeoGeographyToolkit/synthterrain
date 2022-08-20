@@ -76,7 +76,7 @@ def main():
     print('TERRAIN generate')
     t.generate()
 
-    print('CRATERS')
+    #print('CRATERS')
     # Deprecated craters class
     #crater_file = '/usr/local/home/smcmich1/repo/synthterrain/craters_short.xml'
     #c = craters.Craters(t)
@@ -92,28 +92,25 @@ def main():
     print(c)
     #raise Exception('DEBUG')
 
-    #print('InterCraterRocks')
-    #inter = inter_crater_rocks.InterCraterRocks(t)
-    print('IntraCraterRocks')
-    intra = intra_crater_rocks.IntraCraterRocks(t)
-
-    # Do intracrater rock distro if crater details are provided.
-    #intra = IntraCraterRocks()
+    print('InterCraterRocks')
+    inter = inter_crater_rocks.InterCraterRocks(t)
+    #print('IntraCraterRocks')
+    #intra = intra_crater_rocks.IntraCraterRocks(t)
 
     #TODO: configure both types
 
     # This also writes the output file
     print('GENERATE')
-    #inter.generate()
-    intra.generate(c)
+    inter.generate()
+    #intra.generate(c)
     #raise Exception('DEBUG')
 
     # TODO: Pick one or more of the existing functions
     if True:#args.plot: TODO
         print('PLOT')
         figureNumber = 1
-        #inter.plotLocations(figureNumber)
-        intra.plotLocations(figureNumber)
+        inter.plotLocations(figureNumber)
+        #intra.plotLocations(figureNumber)
     plt.show()
     return
 
