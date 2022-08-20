@@ -46,7 +46,7 @@ class IntraCraterRocks(rocks.Rocks):
     #
     def __init__(self, terrain):
         super().__init__(terrain)
-        _craters = None
+        self._craters = None
         self._class_name = "Intra-Crater"
 
     
@@ -62,31 +62,8 @@ class IntraCraterRocks(rocks.Rocks):
     #            specifications
     #
     def generate(self, craters):
-
-        rocks.Rocks.generate(
-            self,
-            self.MIN_DIAMETER_M,
-            self.DELTA_DIAMETER_M,
-            self.MAX_DIAMETER_M)
-
-        self.craters = craters
-        
-        print('\n\n***** Intra-Crater Rocks *****')
-        print('\nRock Density Profile: ' + str(self.ROCK_DENSITY_PROFILE))
-        print('\nMin    rock diameter: ' + str(self.MIN_DIAMETER_M) + ' m')
-        print('\nDelta  rock diameter: ' + str(self.DELTA_DIAMETER_M) + ' m')
-        print('\nMax    rock diameter: ' + str(self.MAX_DIAMETER_M) + ' m')
-        
-        print('_sampleRockLocations')
-        self._sampleRockLocations()
-        print('_sampleRockDiameters')
-        self._sampleRockDiameters()
-        print('_placeRocks')
-        self._placeRocks(10)
-
-
-        if self.OUTPUT_FILE:
-            self.writeXml(self.OUTPUT_FILE);
+        self._craters = craters
+        rocks.Rocks.generate(self, 10)
 
     
     # PROTECTED
@@ -102,20 +79,20 @@ class IntraCraterRocks(rocks.Rocks):
         s = (self._terrain.dem_size[1], self._terrain.dem_size[0])
         self._location_probability_map = np.zeros(s, 'single')
 
-        num_craters = len(self.craters['x'])
+        num_craters = len(self._craters['x'])
         zero_sum_craters = 0
         for i in range(0, num_craters):
 
             # self is the euclidean distance from the center of the crater
             #m_pos = self.craters.positions_xy[self.craters.ejecta_crater_indices[i], :] # 1x2 row vector
-            m_pos = np.array([self.craters['x'][i], self.craters['y'][i]])
+            m_pos = np.array([self._craters['x'][i], self._craters['y'][i]])
             d = np.sqrt(
                 np.power(self._terrain.xs + self._terrain.origin[0] - m_pos[0], 2) +
                 np.power(self._terrain.ys + self._terrain.origin[1] - m_pos[1], 2)) # sizeof dem
 
             # Convert diameter to radius for easier computation of distance (meters)
             #crater_radius_m = self.craters.diameters_m[self.craters.ejecta_crater_indices[i]] / 2
-            crater_radius_m = self.craters['diameter'][i] / 2
+            crater_radius_m = self._craters['diameter'][i] / 2
 
             # Generate an exponentially decaying ejecta field around a crater
             outer_probability_map = self._outerProbability(d, crater_radius_m) # sizeof dem
@@ -143,12 +120,10 @@ class IntraCraterRocks(rocks.Rocks):
             # TODO: Is this math correct?  Age is high positive number
             # The rock density is inverse of the crater age,
             # which simulates buried rocks from old craters
-            #age_diff = 1 - self.craters.ages(self.craters.ejecta_crater_indices(i));
-            age_diff = 1 - self.craters['age'][i]
-            age_diff = 1 - 0.1 # TODO
-            #print('age_diff')
-            #print(age_diff)
-            #print('outer_probability_map')
+            #age_diff = 1 - self._craters.ages(self.craters.ejecta_crater_indices(i));
+            age_diff = 1 - self._craters['age'][i]
+            age_diff = 1 - 0.1 # TODO!!!
+
             temp = np.power(age_diff, self.ROCK_AGE_DECAY) * outer_probability_map
 
             # Add densities to total map

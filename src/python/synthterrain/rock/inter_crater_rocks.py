@@ -10,24 +10,6 @@ class InterCraterRocks(rocks.Rocks):
     # are set via the tunable parameters. The generate()
     # def then produces an XML output file that
     # contains the inter-crater rock distribution.
-   
-    #------------------------------------------
-    # Tunable parameters
-
-    # TODO: Load these from input parameters!
-
-    # Minimum diameter of the range of inter-crater 
-    # rock diameters that  will be generated (meters) 
-    MIN_DIAMETER_M = 0.1
-
-    # Step size of diameters of the range of 
-    # inter-crater rock diameters that will be 
-    # generated (meters)
-    DELTA_DIAMETER_M = 0.001
-
-    # Maximum diameter of the range of inter-crater 
-    # rock diameters that  will be generated (meters)
-    MAX_DIAMETER_M = 2
 
     #------------------------------------------
     # Constructor
@@ -39,7 +21,7 @@ class InterCraterRocks(rocks.Rocks):
         super().__init__(terrain)
         self._class_name = "Inter-Crater"
 
-    
+
     #------------------------------------------
     # Generates an inter-crater rock distribution 
     # XML file. self def should be called 
@@ -48,25 +30,7 @@ class InterCraterRocks(rocks.Rocks):
     # @param self: 
     #
     def generate(self):
-
-        rocks.Rocks.generate(self, self.MIN_DIAMETER_M, self.DELTA_DIAMETER_M, self.MAX_DIAMETER_M)
-
-        print('\n\n***** Inter-Crater Rocks *****')
-        print('\nRock Density Profile: ' + str(self.ROCK_DENSITY_PROFILE))
-        print('\nMin    rock diameter: ' + str(self.MIN_DIAMETER_M) + ' m')
-        print('\nDelta  rock diameter: ' + str(self.DELTA_DIAMETER_M) + ' m')
-        print('\nMax    rock diameter: ' + str(self.MAX_DIAMETER_M) + ' m')
-        
-        print('_sampleRockLocations')
-        self._sampleRockLocations()
-        print('_sampleRockDiameters')
-        self._sampleRockDiameters()
-        print('_placeRocks')
-        self._placeRocks()
-
-        if self.OUTPUT_FILE:
-            print('writeXml')
-            self.writeXml(self.OUTPUT_FILE);
+        rocks.Rocks.generate(self, 0)
 
     
     #------------------------------------------

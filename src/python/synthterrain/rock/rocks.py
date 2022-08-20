@@ -25,6 +25,21 @@ class Rocks:
     # are 'haworth', 'intercrater', and 'intercrater2'.
     ROCK_DENSITY_PROFILE = 'intercrater2'
 
+    # TODO: Load these from input parameters!
+
+    # Minimum diameter of the range of inter-crater 
+    # rock diameters that  will be generated (meters) 
+    MIN_DIAMETER_M = 0.1
+
+    # Step size of diameters of the range of 
+    # inter-crater rock diameters that will be 
+    # generated (meters)
+    DELTA_DIAMETER_M = 0.001
+
+    # Maximum diameter of the range of inter-crater 
+    # rock diameters that  will be generated (meters)
+    MAX_DIAMETER_M = 2
+
     # Output XML filename
     OUTPUT_FILE = []
 
@@ -60,20 +75,32 @@ class Rocks:
     # Subclasses should call self def from 
     # their own generate defs
     #
-    # @param self: 
-    # @param min_diameter_m:
-    # @param step_diameter_m:
-    # @param max_diameter_m:
+    # @param self:
+    # @param plot_start_index:
     #
-    def generate(self, min_rock_diameter_m, step_rock_diameter_m, max_rock_diameter_m):
+    def generate(self, plot_start_index):
         
-        # Generate range [min_rock_diameter_m, max_rock_diameter_m] inclusive
-        self._diameter_range_m = np.arange(min_rock_diameter_m,
-            max_rock_diameter_m+step_rock_diameter_m, step_rock_diameter_m)
+        # Generate range [self.MIN_DIAMETER_M, self.MAX_DIAMETER_M] inclusive
+        self._diameter_range_m = np.arange(self.MIN_DIAMETER_M,
+            self.MAX_DIAMETER_M+self.DELTA_DIAMETER_M,
+            self.DELTA_DIAMETER_M)
 
         self._diameters_m = []
         self.positions_xy = []
         self._location_probability_map = []
+
+        print('\n\n***** ' + self._class_name + ' Rocks *****')
+        print('\nRock Density Profile: ' + str(self.ROCK_DENSITY_PROFILE))
+        print('\nMin    rock diameter: ' + str(self.MIN_DIAMETER_M) + ' m')
+        print('\nDelta  rock diameter: ' + str(self.DELTA_DIAMETER_M) + ' m')
+        print('\nMax    rock diameter: ' + str(self.MAX_DIAMETER_M) + ' m')
+        
+        self._sampleRockLocations()
+        self._sampleRockDiameters()
+        self._placeRocks(plot_start_index)
+
+        if self.OUTPUT_FILE:
+            self.writeXml(self.OUTPUT_FILE);
 
     
     #------------------------------------------
@@ -144,7 +171,7 @@ class Rocks:
     #
     def plotLocations(self, figureNumber):
         num_rocks = len(self._diameters_m)
-        print(self.positions_xy)
+
         xy = utilities.downSample(self.positions_xy, 20000)[0]
         color = 'b'
 
@@ -270,9 +297,7 @@ class Rocks:
         # the probability map is voxelized, so we'll get 
         # whole number positions from sampling it
         prob_map_sum = np.sum(self._location_probability_map)
-        print(self._location_probability_map)
-        print(self._location_probability_map.shape)
-        print(prob_map_sum)
+
         EPSILON = 0.0001
         if prob_map_sum < EPSILON:
             raise Exception('The sum of the location probability map is zero!')
