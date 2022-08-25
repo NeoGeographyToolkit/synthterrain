@@ -120,8 +120,9 @@ class IntraCraterRocks(rocks.Rocks):
     # Compute the number of rocks and the cumulative distribution
     # 
     # @param self:
+    # @param rock_calculator: RockSizeDistribution instance
     #
-    def _compute_num_rocks(self):
+    def _compute_num_rocks(self, rock_calculator):
 
         intercrater_area_sq_m = self._terrain.area_sq_m * self.ROCK_AREA_SCALAR
 
@@ -139,15 +140,11 @@ class IntraCraterRocks(rocks.Rocks):
         else:
             intracrater_area_sq_m = direct_rock_area_sq_m
 
-        min_rock_size = self._diameter_range_m[0]
-        max_rock_size = self._diameter_range_m[-1]
-        rock_calculator = rocks.RockSizeDistribution(self.ROCK_DENSITY_PROFILE,
-                                                     a=min_rock_size, b=max_rock_size)
-        rocks_per_m2 = rock_calculator.calculateDensity(min_rock_size)
+        rocks_per_m2 = rock_calculator.calculateDensity(self._diameter_range_m[0])
 
         num_rocks = int(np.round(rocks_per_m2 * intracrater_area_sq_m))
 
-        return num_rocks, rock_calculator
+        return num_rocks
 
     # PRIVATE
     

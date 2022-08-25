@@ -219,8 +219,8 @@ class Rocks:
         fid.write('</RockList>\n')
 
     # Must be defined by child classes
-    # @return num_rocks, rev_cum_dist
-    def _compute_num_rocks(self):
+    # @return num_rocks
+    def _compute_num_rocks(self, rock_calculator):
         pass
 
 
@@ -233,7 +233,12 @@ class Rocks:
     #
     def _sampleRockDiameters(self):
 
-        num_rocks, rock_calculator = self._compute_num_rocks()
+        min_rock_size = self._diameter_range_m[0]
+        max_rock_size = self._diameter_range_m[-1]
+        rock_calculator = RockSizeDistribution(self.ROCK_DENSITY_PROFILE,
+                                               a=min_rock_size, b=max_rock_size)
+
+        num_rocks = self._compute_num_rocks(rock_calculator)
 
         if self.PLOT_DENSITY_DISTRIBUTION:
             self.plotDensityDistribution(11, rock_calculator, self.ROCK_DENSITY_PROFILE);

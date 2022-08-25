@@ -60,18 +60,14 @@ class InterCraterRocks(rocks.Rocks):
     # Compute the number of rocks and the cumulative distribution
     # 
     # @param self:
+    # @param rock_calculator: RockSizeDistribution instance
     #
-    def _compute_num_rocks(self):
+    def _compute_num_rocks(self, rock_calculator):
 
         # TODO: SHOULD WE SUBTRACT THE EJECTA CRATER AREA?
         intercrater_area_sq_m = self._terrain.area_sq_m * self.ROCK_AREA_SCALAR
 
-        # TODO: Share this class creation
-        min_rock_size = self._diameter_range_m[0]
-        max_rock_size = self._diameter_range_m[-1]
-        rock_calculator = rocks.RockSizeDistribution(self.ROCK_DENSITY_PROFILE,
-                                                     a=min_rock_size, b=max_rock_size)
-        rocks_per_m2 = rock_calculator.calculateDensity(min_rock_size)
+        rocks_per_m2 = rock_calculator.calculateDensity(self._diameter_range_m[0])
         num_rocks = round(rocks_per_m2 * intercrater_area_sq_m)
 
-        return num_rocks, rock_calculator
+        return num_rocks
