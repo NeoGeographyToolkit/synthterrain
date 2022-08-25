@@ -93,24 +93,24 @@ def main():
     #raise Exception('DEBUG')
 
     #print('InterCraterRocks')
-    #inter = inter_crater_rocks.InterCraterRocks(t)
-    print('IntraCraterRocks')
-    intra = intra_crater_rocks.IntraCraterRocks(t)
+    inter = inter_crater_rocks.InterCraterRocks(t)
+    #print('IntraCraterRocks')
+    #intra = intra_crater_rocks.IntraCraterRocks(t)
 
     #TODO: configure both types
 
     # This also writes the output file
     print('GENERATE')
-    #inter.generate()
-    intra.generate(c)
+    inter.generate()
+    #intra.generate(c)
     #raise Exception('DEBUG')
 
     # TODO: Pick one or more of the existing functions
     if True:#args.plot: TODO
         print('PLOT')
         figureNumber = 1
-        #inter.plotLocations(figureNumber)
-        intra.plotLocations(figureNumber)
+        inter.plotLocations(figureNumber)
+        #intra.plotLocations(figureNumber)
     plt.show()
     return
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import numpy as np
+from scipy.stats import rv_continuous
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from synthterrain.rock import utilities
@@ -27,16 +28,16 @@ class Rocks:
 
     # TODO: Load these from input parameters!
 
-    # Minimum diameter of the range of inter-crater 
+    # Minimum diameter of the range of
     # rock diameters that  will be generated (meters) 
     MIN_DIAMETER_M = 0.1
 
     # Step size of diameters of the range of 
-    # inter-crater rock diameters that will be 
+    # rock diameters that will be 
     # generated (meters)
     DELTA_DIAMETER_M = 0.001
 
-    # Maximum diameter of the range of inter-crater 
+    # Maximum diameter of the range of 
     # rock diameters that  will be generated (meters)
     MAX_DIAMETER_M = 2
 
@@ -109,12 +110,13 @@ class Rocks:
     # @param rev_cum_dist:
     # @param profile:
     #
-    def plotDensityDistribution(self, figureNumber, rev_cum_dist, profile):
+    def plotDensityDistribution(self, figureNumber, rock_calculator, profile):
         if self.PLOT_DENSITY_DISTRIBUTION:
             fig = plt.figure(figureNumber)
             ax = fig.add_subplot(111)
             ax.clear()
-            ax.loglog(self._diameter_range_m, rev_cum_dist, 'r+')
+            densities = rock_calculator.calculateDensity(self._diameter_range_m)
+            ax.loglog(self._diameter_range_m, densities, 'r+')
             ax.set_xlabel('Rock Diameter (m)')
             ax.set_ylabel('Cumulative Rock Number Density (#/m^2)')
             ax.set_title(self._class_name + ' Rock Density Distribution\nFit: ' + profile.upper())
@@ -231,17 +233,15 @@ class Rocks:
     #
     def _sampleRockDiameters(self):
 
-        num_rocks, rev_cum_dist = self._compute_num_rocks()
+        num_rocks, rock_calculator = self._compute_num_rocks()
 
         if self.PLOT_DENSITY_DISTRIBUTION:
-            self.plotDensityDistribution(11, rev_cum_dist, self.ROCK_DENSITY_PROFILE);
+            self.plotDensityDistribution(11, rock_calculator, self.ROCK_DENSITY_PROFILE);
 
         # Generate probability distribution
-        prob_dist = utilities.revCDF_2_PDF(rev_cum_dist);
-
-        # TODO: num_rocks too high or something else?
-
         # Sample the rocks sizes randomly
+        prob_dist = rock_calculator.pdf(self._diameter_range_m)
+        prob_dist = prob_dist / np.sum(prob_dist) # This is scaled by self.DELTA_DIAMETER_M
         self._diameters_m = self._terrain.random_generator.choice(self._diameter_range_m,
                                             num_rocks,
                                             True, # Choose with replacement
@@ -334,32 +334,41 @@ class Rocks:
 # Rock density def
 # from VIPER-MSE-SPEC-001 (2/13/2020)
 # 
-# @param diameter_m: rock diameter(s) in meters
-# @param profile: 'intercrater', 
-#                 'intercrater2', or 
-#                 'haworth'
-# @return num_rocks_per_square_m:
-#         the number of rocks with diameters
-#         greater than or equal to the input
-#         argument per square METER
-#
-def calculateDensity(diameter_m, profile):
-    l_profile = profile.lower()
-    if l_profile == 'intercrater':
-        # Low blockiness cases
-        A =  0.00010
-        B = -1.75457
-        # Worst-case
-    elif l_profile == 'intercrater2':
-        A =  0.00030
-        B = -2.482
-        # High blockiness case
-    elif l_profile == 'haworth':
-        A =  0.0020
-        B = -2.6607
-    else:
-        raise Exception('Invalid rock density profile specified')
+# calculateDensity is equivalent CSFD (crater distribution) but
+# for rocks.  See crater/functions.py for a more detailed description of CSFD
+class RockSizeDistribution(rv_continuous):
 
-    num_rocks_per_square_m = A * np.power(diameter_m, B)
-    return num_rocks_per_square_m
+    # @param profile: 'intercrater',
+    #                 'intercrater2', or
+    #                 'haworth'
+    def __init__(self, profile, **kwargs):
+        self._profile = profile.lower()
+        super().__init__(**kwargs)
 
+    # @param diameter_m: rock diameter(s) in meters
+    # @return num_rocks_per_square_m:
+    #         the number of rocks with diameters
+    #         greater than or equal to the input
+    #         argument per square METER
+    def calculateDensity(self, diameter_m):
+
+        if self._profile == 'intercrater':
+            # Low blockiness cases
+            A =  0.00010
+            B = -1.75457
+            # Worst-case
+        elif self._profile == 'intercrater2':
+            A =  0.00030
+            B = -2.482
+            # High blockiness case
+        elif self._profile == 'haworth':
+            A =  0.0020
+            B = -2.6607
+        else:
+            raise Exception('Invalid rock density profile specified')
+
+        num_rocks_per_square_m = A * np.power(diameter_m, B)
+        return num_rocks_per_square_m
+
+    def _cdf(self, diameter_m):
+        return np.ones_like(diameter_m) - (self.calculateDensity(diameter_m) / self.calculateDensity(self.a))

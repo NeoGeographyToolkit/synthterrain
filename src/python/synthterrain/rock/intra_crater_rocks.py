@@ -17,19 +17,6 @@ class IntraCraterRocks(rocks.Rocks):
     
 # TODO: Load these from input parameters!
 
-    # Minimum diameter of the range of intra-crater 
-    # rock diameters that  will be generated (meters)
-    MIN_DIAMETER_M = 0.1
-
-    # Step size of diameters of the range of 
-    # intra-crater rock diameters that will be 
-    # generated (meters)
-    DELTA_DIAMETER_M = 0.001
-
-    # Maximum diameter of the range of intra-crater 
-    # rock diameters that  will be generated (meters)
-    MAX_DIAMETER_M = 2
-
     EJECTA_EXTENT = 1
 
     # Determines how quickly the rock density
@@ -84,14 +71,12 @@ class IntraCraterRocks(rocks.Rocks):
         for i in range(0, num_craters):
 
             # self is the euclidean distance from the center of the crater
-            #m_pos = self.craters.positions_xy[self.craters.ejecta_crater_indices[i], :] # 1x2 row vector
             m_pos = np.array([self._craters['x'][i], self._craters['y'][i]])
             d = np.sqrt(
                 np.power(self._terrain.xs + self._terrain.origin[0] - m_pos[0], 2) +
                 np.power(self._terrain.ys + self._terrain.origin[1] - m_pos[1], 2)) # sizeof dem
 
             # Convert diameter to radius for easier computation of distance (meters)
-            #crater_radius_m = self.craters.diameters_m[self.craters.ejecta_crater_indices[i]] / 2
             crater_radius_m = self._craters['diameter'][i] / 2
 
             # Generate an exponentially decaying ejecta field around a crater
@@ -117,14 +102,12 @@ class IntraCraterRocks(rocks.Rocks):
             # Do we need a min(densities inner) here to check against falloff > 1
             # which increases the center rate?
 
-            # TODO: Is this math correct?  Age is high positive number
+            # TODO: Resolve this difference between old and new craters class
             # The rock density is inverse of the crater age,
             # which simulates buried rocks from old craters
             #age_diff = 1 - self._craters.ages(self.craters.ejecta_crater_indices(i));
             age_diff = 1 - self._craters['age'][i]
             age_diff = 1 - 0.1 # TODO!!!
-
-            temp = np.power(age_diff, self.ROCK_AGE_DECAY) * outer_probability_map
 
             # Add densities to total map
             # Rocks at interior of crater replace, ejecta field adds
@@ -156,13 +139,15 @@ class IntraCraterRocks(rocks.Rocks):
         else:
             intracrater_area_sq_m = direct_rock_area_sq_m
 
-        rev_cum_dist = rocks.calculateDensity(
-            self._diameter_range_m,
-            self.ROCK_DENSITY_PROFILE)
+        min_rock_size = self._diameter_range_m[0]
+        max_rock_size = self._diameter_range_m[-1]
+        rock_calculator = rocks.RockSizeDistribution(self.ROCK_DENSITY_PROFILE,
+                                                     a=min_rock_size, b=max_rock_size)
+        rocks_per_m2 = rock_calculator.calculateDensity(min_rock_size)
 
-        num_rocks = int(np.round(rev_cum_dist[0] * intracrater_area_sq_m))
+        num_rocks = int(np.round(rocks_per_m2 * intracrater_area_sq_m))
 
-        return num_rocks, rev_cum_dist
+        return num_rocks, rock_calculator
 
     # PRIVATE
     

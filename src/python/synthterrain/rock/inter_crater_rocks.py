@@ -66,7 +66,12 @@ class InterCraterRocks(rocks.Rocks):
         # TODO: SHOULD WE SUBTRACT THE EJECTA CRATER AREA?
         intercrater_area_sq_m = self._terrain.area_sq_m * self.ROCK_AREA_SCALAR
 
-        rev_cum_dist = rocks.calculateDensity(self._diameter_range_m, self.ROCK_DENSITY_PROFILE)
-        num_rocks = round(rev_cum_dist[0] * intercrater_area_sq_m)
+        # TODO: Share this class creation
+        min_rock_size = self._diameter_range_m[0]
+        max_rock_size = self._diameter_range_m[-1]
+        rock_calculator = rocks.RockSizeDistribution(self.ROCK_DENSITY_PROFILE,
+                                                     a=min_rock_size, b=max_rock_size)
+        rocks_per_m2 = rock_calculator.calculateDensity(min_rock_size)
+        num_rocks = round(rocks_per_m2 * intercrater_area_sq_m)
 
-        return num_rocks, rev_cum_dist
+        return num_rocks, rock_calculator
