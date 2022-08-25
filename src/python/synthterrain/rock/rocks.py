@@ -35,7 +35,7 @@ class Rocks:
     # Step size of diameters of the range of 
     # rock diameters that will be 
     # generated (meters)
-    DELTA_DIAMETER_M = 0.001
+    DELTA_DIAMETER_M = 0.02
 
     # Maximum diameter of the range of 
     # rock diameters that  will be generated (meters)
@@ -139,6 +139,8 @@ class Rocks:
         ax.loglog(self._diameter_range_m[:-1], final_sample_hist, 'bo')
         ax.set_xlabel('Rock Diameter (m)')
         ax.set_ylabel('Rock Count')
+        ax.set_xlim(left=0, right=self.MAX_DIAMETER_M)
+        ax.set_ylim(bottom=0)
         ax.set_title(self._class_name + ' Rock Diameter Distribution')
 
         ax.legend(['Ideal', 'Prior Sampled', 'Final Sampled'])
@@ -233,10 +235,8 @@ class Rocks:
     #
     def _sampleRockDiameters(self):
 
-        min_rock_size = self._diameter_range_m[0]
-        max_rock_size = self._diameter_range_m[-1]
         rock_calculator = RockSizeDistribution(self.ROCK_DENSITY_PROFILE,
-                                               a=min_rock_size, b=max_rock_size)
+                                               a=self.MIN_DIAMETER_M, b=self.MAX_DIAMETER_M)
 
         num_rocks = self._compute_num_rocks(rock_calculator)
 
@@ -245,6 +245,26 @@ class Rocks:
 
         # Generate probability distribution
         # Sample the rocks sizes randomly
+
+        SEED = 13492463493612533854268 # TODO: Do we want a constant seed?
+        rng_gen = np.random.default_rng(SEED)
+        self._diameters_m = rock_calculator.rvs(size=num_rocks, random_state=rng_gen, scale=1)
+
+        prob_dist = rock_calculator.pdf(self._diameter_range_m)
+        prob_dist = prob_dist / np.sum(prob_dist) # This is scaled by self.DELTA_DIAMETER_M
+        ideal_sample_hist = num_rocks * prob_dist[:-1]
+        final_sample_hist = np.histogram(self._diameters_m, self._diameter_range_m)
+
+        if self.PLOT_DIAMETER_DISTRIBUTION:
+            self.plotDiameterDistributions(
+                12,
+                ideal_sample_hist,
+                ideal_sample_hist,
+                final_sample_hist[0])
+
+        return
+        # TODO: Keep any of the code below?
+
         prob_dist = rock_calculator.pdf(self._diameter_range_m)
         prob_dist = prob_dist / np.sum(prob_dist) # This is scaled by self.DELTA_DIAMETER_M
         self._diameters_m = self._terrain.random_generator.choice(self._diameter_range_m,

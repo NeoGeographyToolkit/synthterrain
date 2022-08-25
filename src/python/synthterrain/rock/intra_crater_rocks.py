@@ -140,7 +140,7 @@ class IntraCraterRocks(rocks.Rocks):
         else:
             intracrater_area_sq_m = direct_rock_area_sq_m
 
-        rocks_per_m2 = rock_calculator.calculateDensity(self._diameter_range_m[0])
+        rocks_per_m2 = rock_calculator.calculateDensity(self.MIN_DIAMETER_M)
 
         num_rocks = int(np.round(rocks_per_m2 * intracrater_area_sq_m))
 
