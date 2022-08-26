@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import xml.etree.ElementTree as ET
 from synthterrain.rock import utilities
 
+# TODO: This class is deprecated!
 class Craters:
     # Crater distribution generator
     # The crater distribution specifications are

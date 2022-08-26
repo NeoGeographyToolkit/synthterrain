@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
+import os
 import math
 import numpy as np
 import scipy.ndimage
-import csv
 
 # Utility defs for synthetic terrain 
 # generation
@@ -62,8 +62,9 @@ def addGradientNoise(location_probability_map, amount):
 
 
     # No disk function in numpy so the values are hardcoded in a file
-    temp = '/usr/local/home/smcmich1/repo/synthterrain/disk.txt' # TODO
-    hfilt = np.loadtxt(temp)
+    this_folder = os.path.dirname(os.path.realpath(__file__))
+    disk_data_file = os.path.join(this_folder, 'disk_filter.csv')
+    hfilt = np.loadtxt(disk_data_file)
     #hfilt = np.fspecial('disk', 11)
 
     # TODO: Verify accuracy!

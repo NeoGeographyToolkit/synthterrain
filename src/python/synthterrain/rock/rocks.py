@@ -122,7 +122,6 @@ class Rocks:
             ax.set_title(self._class_name + ' Rock Density Distribution\nFit: ' + profile.upper())
 
 
-    
     #------------------------------------------
     # @param self: 
     # @param figureNumber:
@@ -139,8 +138,6 @@ class Rocks:
         ax.loglog(self._diameter_range_m[:-1], final_sample_hist, 'bo')
         ax.set_xlabel('Rock Diameter (m)')
         ax.set_ylabel('Rock Count')
-        ax.set_xlim(left=0, right=self.MAX_DIAMETER_M)
-        ax.set_ylim(bottom=0)
         ax.set_title(self._class_name + ' Rock Diameter Distribution')
 
         ax.legend(['Ideal', 'Prior Sampled', 'Final Sampled'])

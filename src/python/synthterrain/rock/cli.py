@@ -11,23 +11,24 @@
 
 import logging
 from pathlib import Path
-from re import T
+#from re import T
 import matplotlib.pyplot as plt
 import sys
 
-from matplotlib.pyplot import figure
+# TODO: Clean up includes
+#from matplotlib.pyplot import figure
 
-from shapely.geometry import box
+#from shapely.geometry import box
 
 import synthterrain.util as util
 import synthterrain.crater as crater
 
 #from synthterrain.rock import craters
 from synthterrain.rock import terrain
-from synthterrain.rock import rocks
+#from synthterrain.rock import rocks
 from synthterrain.rock import inter_crater_rocks
 from synthterrain.rock import intra_crater_rocks
-from synthterrain.rock import utilities
+#from synthterrain.rock import utilities
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ def arg_parser():
     parser.add_argument(
         "-c", "--crater",
         type=Path,
-        help="Crater file."
+        help="Crater file.  If provided, generate intra-crater rocks"
     )
     parser.add_argument(
         "-x", "--xml",
@@ -54,6 +55,18 @@ def arg_parser():
         type=Path,
         help="Path to output file."
     )
+    parser.add_argument(
+        "--bbox",
+        nargs=4,
+        type=float,
+        default=[0, 1000, 1000, 0],
+        metavar=('MINX', 'MAXY', 'MAXX', 'MINY'),
+        help="The coordinates of the bounding box, expressed in meters, to "
+             "evaluate in min-x, max-y, max-x, min-y order (which is ulx, "
+             "uly, lrx, lry, the GDAL pattern). "
+             "Default: %(default)s"
+    )
+
     return parser
 
 
@@ -68,12 +81,12 @@ def main():
     #canvas = box(*args.bbox)
 
     # Do generic rock distro across bbox.
-    print('TERRAIN')
+    print('Constructing terrain...')
     t = terrain.Terrain()
-    t.setOrigin(-660, -435) # TODO: This is actually the corner?
-    t.setXsize(200) #TODO
-    t.setYsize(200) #TODO
-    print('TERRAIN generate')
+    t.setOrigin(args.bbox[0], args.bbox[3]) # TODO: This is actually the corner?
+    t.setXsize(args.bbox[2] - args.bbox[0])
+    t.setYsize(args.bbox[1] - args.bbox[3])
+    print('Generating terrain...')
     t.generate()
 
     #print('CRATERS')
@@ -85,32 +98,23 @@ def main():
     #c.OUTPUT_FILE = '/usr/local/home/smcmich1/repo/synthterrain/craters_short_copy.xml'
     #c.generate()
 
-    # New craters class
-    crater_file = '/usr/local/home/smcmich1/repo/synthterrain/crater_output.csv'
-    c = crater.from_file(crater_file)
-    print('Input crater info:')
-    print(c)
-    #raise Exception('DEBUG')
-
-    #print('InterCraterRocks')
-    #inter = inter_crater_rocks.InterCraterRocks(t)
-    #print('IntraCraterRocks')
-    intra = intra_crater_rocks.IntraCraterRocks(t)
-
     #TODO: configure both types
 
-    # This also writes the output file
-    print('GENERATE')
-    #inter.generate()
-    intra.generate(c)
-    #raise Exception('DEBUG')
+    # New craters class
+    if args.crater:
+        loaded_craters = crater.from_file(str(args.crater))
+        print('Input crater info:')
+        print(loaded_craters)
+        print('Constructing IntraCraterRocks')
+        intra = intra_crater_rocks.IntraCraterRocks(t)
+        print('Generating rocks...')
+        intra.generate(loaded_craters)
+    else:
+        print('Constructing InterCraterRocks')
+        inter = inter_crater_rocks.InterCraterRocks(t)
+        print('Generating rocks...')
+        inter.generate()
 
-    # TODO: Pick one or more of the existing functions
-    if True:#args.plot: TODO
-        print('PLOT')
-        figureNumber = 1
-        #inter.plotLocations(figureNumber)
-        intra.plotLocations(figureNumber)
     plt.show()
     return
 
