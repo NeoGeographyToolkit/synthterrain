@@ -47,10 +47,11 @@ def main():
     crater_df = cr.synthesize(crater_dist, polygon=canvas)
     cr.to_file(crater_df, args.outfile, args.xml)
 
-    # Maybe something like this, to be revised once the rock modules are
-    # fleshed out.
-    rock_df = rk.synthesize()
-    rk.to_file(rock_df, craters=crater_df)
+    print('TOP ROCK')
+#    # Maybe something like this, to be revised once the rock modules are
+#    # fleshed out.
+#    rock_df = rk.synthesize()
+#    rk.to_file(rock_df, craters=crater_df)
 
     return
 

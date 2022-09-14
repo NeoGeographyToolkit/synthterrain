@@ -11,11 +11,24 @@
 
 import logging
 from pathlib import Path
+#from re import T
+import matplotlib.pyplot as plt
 import sys
 
-from shapely.geometry import box
+# TODO: Clean up includes
+#from matplotlib.pyplot import figure
+
+#from shapely.geometry import box
 
 import synthterrain.util as util
+import synthterrain.crater as crater
+
+#from synthterrain.rock import craters
+from synthterrain.rock import terrain
+#from synthterrain.rock import rocks
+from synthterrain.rock import inter_crater_rocks
+from synthterrain.rock import intra_crater_rocks
+#from synthterrain.rock import utilities
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +41,7 @@ def arg_parser():
     parser.add_argument(
         "-c", "--crater",
         type=Path,
-        help="Crater file."
+        help="Crater file.  If provided, generate intra-crater rocks"
     )
     parser.add_argument(
         "-x", "--xml",
@@ -42,6 +55,18 @@ def arg_parser():
         type=Path,
         help="Path to output file."
     )
+    parser.add_argument(
+        "--bbox",
+        nargs=4,
+        type=float,
+        default=[0, 1000, 1000, 0],
+        metavar=('MINX', 'MAXY', 'MAXX', 'MINY'),
+        help="The coordinates of the bounding box, expressed in meters, to "
+             "evaluate in min-x, max-y, max-x, min-y order (which is ulx, "
+             "uly, lrx, lry, the GDAL pattern). "
+             "Default: %(default)s"
+    )
+
     return parser
 
 
@@ -53,15 +78,44 @@ def main():
     # This could more generically take an arbitrary polygon
     # What if the polygon is different than the one in the crater file?
     # Probably need to figure out how to standardize and robustify.
-    canvas = box(*args.bbox)
+    #canvas = box(*args.bbox)
 
     # Do generic rock distro across bbox.
+    print('Constructing terrain...')
+    t = terrain.Terrain()
+    t.setOrigin(args.bbox[0], args.bbox[3]) # TODO: This is actually the corner?
+    t.setXsize(args.bbox[2] - args.bbox[0])
+    t.setYsize(args.bbox[1] - args.bbox[3])
+    print('Generating terrain...')
+    t.generate()
 
-    # Do intracrater rock distro if crater details are provided.
+    #print('CRATERS')
+    # Deprecated craters class
+    #crater_file = '/usr/local/home/smcmich1/repo/synthterrain/craters_short.xml'
+    #c = craters.Craters(t)
+    ##c.readExistingCraterFile(crater_file)
+    ##c.INPUT_CRATER_FILE = crater_file
+    #c.OUTPUT_FILE = '/usr/local/home/smcmich1/repo/synthterrain/craters_short_copy.xml'
+    #c.generate()
 
-    # Write out results.
-    # rock.to_file(df, args.outfile, args.xml)
+    #TODO: configure both types
 
+    # New craters class
+    if args.crater:
+        loaded_craters = crater.from_file(str(args.crater))
+        print('Input crater info:')
+        print(loaded_craters)
+        print('Constructing IntraCraterRocks')
+        intra = intra_crater_rocks.IntraCraterRocks(t)
+        print('Generating rocks...')
+        intra.generate(loaded_craters)
+    else:
+        print('Constructing InterCraterRocks')
+        inter = inter_crater_rocks.InterCraterRocks(t)
+        print('Generating rocks...')
+        inter.generate()
+
+    plt.show()
     return
 
 
