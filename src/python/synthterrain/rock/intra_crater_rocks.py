@@ -30,9 +30,9 @@ class IntraCraterRocks(rocks.Rocks):
     # 
     # @param terrain: the terrain specification
     #            class
-    #
-    def __init__(self, terrain):
-        super().__init__(terrain)
+    #_location_probability_map
+    def __init__(self, raster):
+        super().__init__(raster)
         self._craters = None
         self._class_name = "Intra-Crater"
 
@@ -63,7 +63,7 @@ class IntraCraterRocks(rocks.Rocks):
     #
     def _sampleRockLocations(self):
         
-        s = (self._terrain.dem_size[1], self._terrain.dem_size[0])
+        s = (self._raster.dem_size[1], self._raster.dem_size[0])
         self._location_probability_map = np.zeros(s, 'single')
 
         num_craters = len(self._craters['x'])
@@ -73,8 +73,8 @@ class IntraCraterRocks(rocks.Rocks):
             # self is the euclidean distance from the center of the crater
             m_pos = np.array([self._craters['x'][i], self._craters['y'][i]])
             d = np.sqrt(
-                np.power(self._terrain.xs + self._terrain.origin[0] - m_pos[0], 2) +
-                np.power(self._terrain.ys + self._terrain.origin[1] - m_pos[1], 2)) # sizeof dem
+                np.power(self._raster.xs + self._raster.origin[0] - m_pos[0], 2) +
+                np.power(self._raster.ys + self._raster.origin[1] - m_pos[1], 2)) # sizeof dem
 
             # Convert diameter to radius for easier computation of distance (meters)
             crater_radius_m = self._craters['diameter'][i] / 2
@@ -124,7 +124,7 @@ class IntraCraterRocks(rocks.Rocks):
     #
     def _compute_num_rocks(self, rock_calculator):
 
-        intercrater_area_sq_m = self._terrain.area_sq_m * self.ROCK_AREA_SCALAR
+        intercrater_area_sq_m = self._raster.area_sq_m * self.ROCK_AREA_SCALAR
 
         eps = 2.2204e-16
         threshold_values = np.where(self._location_probability_map > eps, self._location_probability_map, 0)

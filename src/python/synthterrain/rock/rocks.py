@@ -13,16 +13,11 @@ class Raster:
     #------------------------------------------
     # Constructor
     #
-    def __init__(self, origin, height, width, resolution_meters, rand_seed=None):
+    def __init__(self, origin, height, width, resolution_meters):
         self.origin = origin
         self.resolution_m = resolution_meters
         self.dem_size = [int(height), int(width)]
         self.area_sq_m = self.dem_size[0] * self.dem_size[1]
-        if rand_seed:
-            self.random_generator = np.random.default_rng(seed = rand_seed)
-            #print('\nGenerating terrain with seed #d', rand_seed)
-        else:
-            self.random_generator = np.random.default_rng()
         [self.xs,self.ys] = np.meshgrid(
             range(0, self.dem_size[0]),
             range(0, self.dem_size[1]))
@@ -33,6 +28,8 @@ class Rocks:
    
     #------------------------------------------
     # Tunable parameters
+
+    RAND_SEED = None
 
     # Limit on how far randomly drawn values 
     # can differ from their measured means
@@ -86,14 +83,20 @@ class Rocks:
     # @param terrain: the terrain specification
     #            class
     #
-    def __init__(self, terrain):
-        self._terrain = terrain
+    def __init__(self, raster):
+        self._raster = raster
         self._diameter_range_m = None
         self._diameters_m = None
         self._location_probability_map = None
         self.positions_xy = None
         self._class_name = "BASE" # Should be set by derived class
-    
+
+        if self.RAND_SEED:
+            self._random_generator = np.random.default_rng(seed = self.RAND_SEED)
+            #print('\nGenerating terrain with seed #d', self.RAND_SEED)
+        else:
+            self._random_generator = np.random.default_rng()
+
     #------------------------------------------
     # Subclasses should call self def from 
     # their own generate defs
@@ -179,8 +182,8 @@ class Rocks:
         #ax.set_zlabel('Terrain Z (m)') # TODO
         ax.set_title(self._class_name + ' Rock Location Probability Map')
 
-        ax.set_xlim([0,self._terrain.dem_size[0]])
-        ax.set_ylim([0,self._terrain.dem_size[1]])
+        ax.set_xlim([0,self._raster.dem_size[0]])
+        ax.set_ylim([0,self._raster.dem_size[1]])
         # ax.view([0,90]) TODO
 
         divider = make_axes_locatable(ax)
@@ -206,8 +209,8 @@ class Rocks:
         ax.set_ylabel('Terrain Y (m)')
         ax.set_title(self._class_name + ' Rock Locations\nRock Count = ' + str(num_rocks))
 
-        ax.set_xlim([0,self._terrain.dem_size[0]])
-        ax.set_ylim([0,self._terrain.dem_size[1]])
+        ax.set_xlim([0,self._raster.dem_size[0]])
+        ax.set_ylim([0,self._raster.dem_size[1]])
 
 
     #------------------------------------------
@@ -235,7 +238,7 @@ class Rocks:
         
         fid.write('<?xml version="1.0" encoding="UTF-8"?>\n')
         fid.write('<RockList name="UserRocks">\n')
-        s = f'    <RockData diameter="{np.as_array(self._diameters_m)}" x="{self.positions_xy[:,0] + self._terrain.origin[0]}" y="{self.positions_xy[:,1] + self_terrain.origin[1]}"/>\n'
+        s = f'    <RockData diameter="{np.as_array(self._diameters_m)}" x="{self.positions_xy[:,0] + self._raster.origin[0]}" y="{self.positions_xy[:,1] + self_raster.origin[1]}"/>\n'
         fid.write(s),
         fid.write('</RockList>\n')
 
@@ -281,48 +284,6 @@ class Rocks:
                 ideal_sample_hist,
                 final_sample_hist[0])
 
-        return
-        # TODO: Keep any of the code below?
-
-        prob_dist = rock_calculator.pdf(self._diameter_range_m)
-        prob_dist = prob_dist / np.sum(prob_dist) # This is scaled by self.DELTA_DIAMETER_M
-        self._diameters_m = self._terrain.random_generator.choice(self._diameter_range_m,
-                                            num_rocks,
-                                            True, # Choose with replacement
-                                            prob_dist)
-
-        # TODO: Move bin right edges to bin centers?
-        # Compare sample to ideal distribution
-        prior_sample_hist = np.histogram(self._diameters_m, self._diameter_range_m)
-
-        # If the random terrain has too many or too few 
-        # rocks of a certain size, we replace those rocks 
-        # with the expected number of rocks that size.
-        ideal_sample_hist = num_rocks * prob_dist[:-1]
-
-        rock_dist_error = abs(ideal_sample_hist - prior_sample_hist[0])
-        for i in range(0, len(rock_dist_error)):
-            if rock_dist_error[i] > np.round(self.SIGMA_FRACTION * ideal_sample_hist[i]):
-                ideal_count = int(ideal_sample_hist[i])
-                current_size = self._diameter_range_m[i]
-
-                # get rid of any ideal size craters
-                self._diameters_m = self._diameters_m[self._diameters_m != current_size]
-
-                # add correct number of ideal size craters
-                new_data = current_size * np.ones((ideal_count,))
-                self._diameters_m = np.concatenate((self._diameters_m, new_data))
-
-        # TODO: Move bin right edges to bin centers?
-        final_sample_hist = np.histogram(self._diameters_m, self._diameter_range_m)
-
-        if self.PLOT_DIAMETER_DISTRIBUTION:
-            self.plotDiameterDistributions(
-                12,
-                ideal_sample_hist,
-                prior_sample_hist[0],
-                final_sample_hist[0])
-
 
     #------------------------------------------
     # Places rocks according to the location
@@ -346,7 +307,7 @@ class Rocks:
         if prob_map_sum < EPSILON:
             raise Exception('The sum of the location probability map is zero!')
         flat_prob_map = self._location_probability_map.flatten() / prob_map_sum
-        rock_positions_idx = self._terrain.random_generator.choice(
+        rock_positions_idx = self._random_generator.choice(
             range(0,len(flat_prob_map)),
             num_rocks,
             True, # Choose with replacement
@@ -354,16 +315,16 @@ class Rocks:
         )
 
         [rock_pos_y, rock_pos_x] = np.unravel_index(
-            rock_positions_idx, self._terrain.dem_size)
+            rock_positions_idx, self._raster.dem_size)
 
         # Sample uniformly in the grid within each 
         # fractional voxel, decide where the rock goes 
         # (we dont want rocks placed only on whole 
         # number coordinates)
-        delta_pos = self._terrain.random_generator.random([2, num_rocks])
+        delta_pos = self._random_generator.random([2, num_rocks])
 
-        rock_pos_x = np.mod(rock_pos_x + delta_pos[0,:], self._terrain.dem_size[0])
-        rock_pos_y = np.mod(rock_pos_y + delta_pos[1,:], self._terrain.dem_size[1])
+        rock_pos_x = np.mod(rock_pos_x + delta_pos[0,:], self._raster.dem_size[0])
+        rock_pos_y = np.mod(rock_pos_y + delta_pos[1,:], self._raster.dem_size[1])
 
         self.positions_xy = np.stack((rock_pos_x, rock_pos_y))
 

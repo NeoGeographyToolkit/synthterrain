@@ -78,20 +78,10 @@ def main():
     #canvas = box(*args.bbox)
 
     # Do generic rock distro across bbox.
-    print('Constructing terrain...')
     raster = rocks.Raster(origin = (args.bbox[0], args.bbox[3]),
                           height = args.bbox[1] - args.bbox[3],
                           width = args.bbox[2] - args.bbox[0],
                           resolution_meters = 1.0)
-
-    #print('CRATERS')
-    # Deprecated craters class
-    #crater_file = '/usr/local/home/smcmich1/repo/synthterrain/craters_short.xml'
-    #c = craters.Craters(t)
-    ##c.readExistingCraterFile(crater_file)
-    ##c.INPUT_CRATER_FILE = crater_file
-    #c.OUTPUT_FILE = '/usr/local/home/smcmich1/repo/synthterrain/craters_short_copy.xml'
-    #c.generate()
 
     #TODO: configure both types
 
