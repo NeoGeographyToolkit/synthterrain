@@ -41,10 +41,10 @@ class InterCraterRocks(rocks.Rocks):
     #
     def _sampleRockLocations(self):
         
-        if self._raster.dem_size[0] < 10 or self._raster.dem_size[1] < 10:
-            self._location_probability_map = np.ones(self._raster.dem_size)
+        if self._raster.dem_size_pixels[0] < 10 or self._raster.dem_size_pixels[1] < 10:
+            self._location_probability_map = np.ones(self._raster.dem_size_pixels)
         else:
-            self._location_probability_map = self._random_generator.random(self._raster.dem_size)
+            self._location_probability_map = self._random_generator.random(self._raster.dem_size_pixels)
 
             # Perturb the density map locally with some 
             # perlin-like noise so rocks clump together more
