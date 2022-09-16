@@ -6,6 +6,28 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from synthterrain.rock import utilities
 
+
+class Raster:
+    """Simple class containing a raster description"""
+
+    #------------------------------------------
+    # Constructor
+    #
+    def __init__(self, origin, height, width, resolution_meters, rand_seed=None):
+        self.origin = origin
+        self.resolution_m = resolution_meters
+        self.dem_size = [int(height), int(width)]
+        self.area_sq_m = self.dem_size[0] * self.dem_size[1]
+        if rand_seed:
+            self.random_generator = np.random.default_rng(seed = rand_seed)
+            #print('\nGenerating terrain with seed #d', rand_seed)
+        else:
+            self.random_generator = np.random.default_rng()
+        [self.xs,self.ys] = np.meshgrid(
+            range(0, self.dem_size[0]),
+            range(0, self.dem_size[1]))
+
+
 class Rocks:
     # Base class for rock distribution generators
    
