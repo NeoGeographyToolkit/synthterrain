@@ -63,7 +63,7 @@ class IntraCraterRocks(rocks.Rocks):
     #
     def _sampleRockLocations(self):
         
-        s = (self._raster.dem_size[1], self._raster.dem_size[0])
+        s = (self._raster.dem_size_pixels[1], self._raster.dem_size_pixels[0])
         self._location_probability_map = np.zeros(s, 'single')
 
         num_craters = len(self._craters['x'])

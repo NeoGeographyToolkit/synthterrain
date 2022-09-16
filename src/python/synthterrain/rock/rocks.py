@@ -13,14 +13,17 @@ class Raster:
     #------------------------------------------
     # Constructor
     #
-    def __init__(self, origin, height, width, resolution_meters):
+    def __init__(self, origin, nrows, ncols, resolution_meters):
         self.origin = origin
         self.resolution_m = resolution_meters
-        self.dem_size = [int(height), int(width)]
-        self.area_sq_m = self.dem_size[0] * self.dem_size[1]
-        [self.xs,self.ys] = np.meshgrid(
-            range(0, self.dem_size[0]),
-            range(0, self.dem_size[1]))
+        self.dem_size_pixels = (int(nrows), int(ncols))
+        self.dem_size_m = (self.dem_size_pixels[0] * resolution_meters,
+                           self.dem_size_pixels[1] * resolution_meters)
+        self.area_sq_m = self.dem_size_m[0] * self.dem_size_m[1]
+        [self.xs, self.ys] = np.meshgrid(
+            np.arange(0, self.dem_size_m[0], resolution_meters),
+            np.arange(0, self.dem_size_m[1], resolution_meters)
+        )
 
 
 class Rocks:
@@ -182,8 +185,8 @@ class Rocks:
         #ax.set_zlabel('Terrain Z (m)') # TODO
         ax.set_title(self._class_name + ' Rock Location Probability Map')
 
-        ax.set_xlim([0,self._raster.dem_size[0]])
-        ax.set_ylim([0,self._raster.dem_size[1]])
+        ax.set_xlim([0, self._raster.dem_size_m[0]])
+        ax.set_ylim([0, self._raster.dem_size_m[1]])
         # ax.view([0,90]) TODO
 
         divider = make_axes_locatable(ax)
@@ -209,8 +212,8 @@ class Rocks:
         ax.set_ylabel('Terrain Y (m)')
         ax.set_title(self._class_name + ' Rock Locations\nRock Count = ' + str(num_rocks))
 
-        ax.set_xlim([0,self._raster.dem_size[0]])
-        ax.set_ylim([0,self._raster.dem_size[1]])
+        ax.set_xlim([0, self._raster.dem_size_m[0]])
+        ax.set_ylim([0, self._raster.dem_size_m[1]])
 
 
     #------------------------------------------
@@ -314,8 +317,12 @@ class Rocks:
             flat_prob_map # Weights
         )
 
+        # Convert from 1D to 2D indices
         [rock_pos_y, rock_pos_x] = np.unravel_index(
-            rock_positions_idx, self._raster.dem_size)
+            rock_positions_idx, self._raster.dem_size_pixels)
+        # Convert to x,y offset from the origin
+        rock_pos_x = rock_pos_x * self._raster.resolution_m
+        rock_pos_y = rock_pos_y * self._raster.resolution_m
 
         # Sample uniformly in the grid within each 
         # fractional voxel, decide where the rock goes 
@@ -323,8 +330,8 @@ class Rocks:
         # number coordinates)
         delta_pos = self._random_generator.random([2, num_rocks])
 
-        rock_pos_x = np.mod(rock_pos_x + delta_pos[0,:], self._raster.dem_size[0])
-        rock_pos_y = np.mod(rock_pos_y + delta_pos[1,:], self._raster.dem_size[1])
+        rock_pos_x = np.mod(rock_pos_x + delta_pos[0,:], self._raster.dem_size_m[0])
+        rock_pos_y = np.mod(rock_pos_y + delta_pos[1,:], self._raster.dem_size_m[1])
 
         self.positions_xy = np.stack((rock_pos_x, rock_pos_y))
 

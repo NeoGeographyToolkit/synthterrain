@@ -78,10 +78,11 @@ def main():
     #canvas = box(*args.bbox)
 
     # Do generic rock distro across bbox.
+    RESOLUTION = 0.2
     raster = rocks.Raster(origin = (args.bbox[0], args.bbox[3]),
-                          height = args.bbox[1] - args.bbox[3],
-                          width = args.bbox[2] - args.bbox[0],
-                          resolution_meters = 1.0)
+                          nrows = (args.bbox[1] - args.bbox[3]) / RESOLUTION,
+                          ncols = (args.bbox[2] - args.bbox[0]) / RESOLUTION,
+                          resolution_meters = RESOLUTION)
 
     #TODO: configure both types
 
