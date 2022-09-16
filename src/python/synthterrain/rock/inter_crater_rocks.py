@@ -17,8 +17,8 @@ class InterCraterRocks(rocks.Rocks):
     # @param terrain: the terrain specification
     #            class
     #
-    def __init__(self, terrain):
-        super().__init__(terrain)
+    def __init__(self, raster):
+        super().__init__(raster)
         self._class_name = "Inter-Crater"
 
 
@@ -41,10 +41,10 @@ class InterCraterRocks(rocks.Rocks):
     #
     def _sampleRockLocations(self):
         
-        if self._terrain.dem_size[0] < 10 or self._terrain.dem_size[1] < 10:
-            self._location_probability_map = np.ones(self._terrain.dem_size)
+        if self._raster.dem_size[0] < 10 or self._raster.dem_size[1] < 10:
+            self._location_probability_map = np.ones(self._raster.dem_size)
         else:
-            self._location_probability_map = self._terrain.random_generator.random(self._terrain.dem_size)
+            self._location_probability_map = self._random_generator.random(self._raster.dem_size)
 
             # Perturb the density map locally with some 
             # perlin-like noise so rocks clump together more
@@ -65,7 +65,7 @@ class InterCraterRocks(rocks.Rocks):
     def _compute_num_rocks(self, rock_calculator):
 
         # TODO: SHOULD WE SUBTRACT THE EJECTA CRATER AREA?
-        intercrater_area_sq_m = self._terrain.area_sq_m * self.ROCK_AREA_SCALAR
+        intercrater_area_sq_m = self._raster.area_sq_m * self.ROCK_AREA_SCALAR
 
         rocks_per_m2 = rock_calculator.calculateDensity(self._diameter_range_m[0])
         num_rocks = round(rocks_per_m2 * intercrater_area_sq_m)
