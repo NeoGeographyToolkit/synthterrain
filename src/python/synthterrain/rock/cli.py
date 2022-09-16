@@ -23,12 +23,9 @@ import sys
 import synthterrain.util as util
 import synthterrain.crater as crater
 
-#from synthterrain.rock import craters
-from synthterrain.rock import terrain
-#from synthterrain.rock import rocks
+from synthterrain.rock import rocks
 from synthterrain.rock import inter_crater_rocks
 from synthterrain.rock import intra_crater_rocks
-#from synthterrain.rock import utilities
 
 logger = logging.getLogger(__name__)
 
@@ -82,12 +79,10 @@ def main():
 
     # Do generic rock distro across bbox.
     print('Constructing terrain...')
-    t = terrain.Terrain()
-    t.setOrigin(args.bbox[0], args.bbox[3]) # TODO: This is actually the corner?
-    t.setXsize(args.bbox[2] - args.bbox[0])
-    t.setYsize(args.bbox[1] - args.bbox[3])
-    print('Generating terrain...')
-    t.generate()
+    raster = rocks.Raster(origin = (args.bbox[0], args.bbox[3]),
+                          height = args.bbox[1] - args.bbox[3],
+                          width = args.bbox[2] - args.bbox[0],
+                          resolution_meters = 1.0)
 
     #print('CRATERS')
     # Deprecated craters class
@@ -106,12 +101,12 @@ def main():
         print('Input crater info:')
         print(loaded_craters)
         print('Constructing IntraCraterRocks')
-        intra = intra_crater_rocks.IntraCraterRocks(t)
+        intra = intra_crater_rocks.IntraCraterRocks(raster)
         print('Generating rocks...')
         intra.generate(loaded_craters)
     else:
         print('Constructing InterCraterRocks')
-        inter = inter_crater_rocks.InterCraterRocks(t)
+        inter = inter_crater_rocks.InterCraterRocks(raster)
         print('Generating rocks...')
         inter.generate()
 
