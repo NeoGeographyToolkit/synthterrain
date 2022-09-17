@@ -83,7 +83,7 @@ def main():
                           ncols = (args.bbox[2] - args.bbox[0]) / RESOLUTION,
                           resolution_meters = RESOLUTION)
 
-    #TODO: configure both types
+    rock_parameters = rocks.RockParams()
 
     # New craters class
     if args.crater:
@@ -91,13 +91,13 @@ def main():
         print('Input crater info:')
         print(loaded_craters)
         print('Constructing IntraCraterRocks')
-        intra = intra_crater_rocks.IntraCraterRocks(raster)
+        intra = intra_crater_rocks.IntraCraterRocks(raster, rock_parameters)
         print('Generating rocks...')
         intra.generate(loaded_craters)
         r = intra
     else:
         print('Constructing InterCraterRocks')
-        inter = inter_crater_rocks.InterCraterRocks(raster)
+        inter = inter_crater_rocks.InterCraterRocks(raster, rock_parameters)
         print('Generating rocks...')
         inter.generate()
         r = inter

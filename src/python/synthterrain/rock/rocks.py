@@ -26,42 +26,49 @@ class Raster:
         )
 
 
+class RockParams:
+    def __init__(self):
+
+        # Limit on how far randomly drawn values
+        # can differ from their measured means
+        self.sigma_fraction = 0.1
+
+        # Terrain area scale factor for altering
+        # rock distributions without altering the
+        # terrain size itself
+        self.rock_area_scaler = 1.0
+
+        # Rock density profile per the VIPER environmental
+        # spec. The currently implemented density profiles 
+        # are 'haworth', 'intercrater', and 'intercrater2'.
+        self.rock_density_profile = 'intercrater2'
+
+        # Minimum diameter of the range of
+        # rock diameters that  will be generated (meters)
+        self.min_diameter_m = 0.1
+
+        # Step size of diameters of the range of
+        # rock diameters that will be
+        # generated (meters)
+        self.delta_diameter_m = 0.02
+
+        # Maximum diameter of the range of
+        # rock diameters that  will be generated (meters)
+        self.max_diameter_m = 2
+
+        # --- For Intra-Craters ---
+
+        self.ejecta_extent = 1
+
+        # Determines how quickly the rock density
+        # decreases beyond the rim of a crater
+        self.ejecta_sharpness = 1
+
+        self.rock_age_decay = 3
+
+
 class Rocks:
     # Base class for rock distribution generators
-   
-    #------------------------------------------
-    # Tunable parameters
-
-    RAND_SEED = None
-
-    # Limit on how far randomly drawn values 
-    # can differ from their measured means
-    SIGMA_FRACTION = 0.1
-
-    # Terrain area scale factor for altering
-    # rock distributions without altering the
-    # terrain size itself
-    ROCK_AREA_SCALAR = 1.0
-
-    # Rock density profile per the VIPER environmental
-    # spec. The currently implemented density profiles 
-    # are 'haworth', 'intercrater', and 'intercrater2'.
-    ROCK_DENSITY_PROFILE = 'intercrater2'
-
-    # TODO: Load these from input parameters!
-
-    # Minimum diameter of the range of
-    # rock diameters that  will be generated (meters) 
-    MIN_DIAMETER_M = 0.1
-
-    # Step size of diameters of the range of 
-    # rock diameters that will be 
-    # generated (meters)
-    DELTA_DIAMETER_M = 0.02
-
-    # Maximum diameter of the range of 
-    # rock diameters that  will be generated (meters)
-    MAX_DIAMETER_M = 2
 
     # PROTECTED
 
@@ -71,7 +78,8 @@ class Rocks:
     # @param terrain: the terrain specification
     #            class
     #
-    def __init__(self, raster):
+    def __init__(self, raster, params=RockParams(), rand_seed=None):
+        self.params = params
         self._raster = raster
         self._diameter_range_m = None
         self.diameters_m = None
@@ -80,9 +88,8 @@ class Rocks:
         self._class_name = "BASE" # Should be set by derived class
         self._rock_calculator = None
 
-        if self.RAND_SEED:
-            self._random_generator = np.random.default_rng(seed = self.RAND_SEED)
-            #print('\nGenerating terrain with seed #d', self.RAND_SEED)
+        if rand_seed:
+            self._random_generator = np.random.default_rng(seed = rand_seed)
         else:
             self._random_generator = np.random.default_rng()
 
@@ -95,20 +102,20 @@ class Rocks:
     #
     def generate(self):
         
-        # Generate range [self.MIN_DIAMETER_M, self.MAX_DIAMETER_M] inclusive
-        self._diameter_range_m = np.arange(self.MIN_DIAMETER_M,
-            self.MAX_DIAMETER_M+self.DELTA_DIAMETER_M,
-            self.DELTA_DIAMETER_M)
+        # Generate range [self.params.min_diameter_m, self.params.max_diameter_m] inclusive
+        self._diameter_range_m = np.arange(self.params.min_diameter_m,
+            self.params.max_diameter_m+self.params.delta_diameter_m,
+            self.params.delta_diameter_m)
 
         self.diameters_m = []
         self.positions_xy = []
         self._location_probability_map = []
 
         print('\n\n***** ' + self._class_name + ' Rocks *****')
-        print('\nRock Density Profile: ' + str(self.ROCK_DENSITY_PROFILE))
-        print('\nMin    rock diameter: ' + str(self.MIN_DIAMETER_M) + ' m')
-        print('\nDelta  rock diameter: ' + str(self.DELTA_DIAMETER_M) + ' m')
-        print('\nMax    rock diameter: ' + str(self.MAX_DIAMETER_M) + ' m')
+        print('\nRock Density Profile: ' + str(self.params.rock_density_profile))
+        print('\nMin    rock diameter: ' + str(self.params.min_diameter_m) + ' m')
+        print('\nDelta  rock diameter: ' + str(self.params.delta_diameter_m) + ' m')
+        print('\nMax    rock diameter: ' + str(self.params.max_diameter_m) + ' m')
         
         self._sampleRockLocations()
         self._sampleRockDiameters()
@@ -128,7 +135,7 @@ class Rocks:
         ax.loglog(self._diameter_range_m, densities, 'r+')
         ax.set_xlabel('Rock Diameter (m)')
         ax.set_ylabel('Cumulative Rock Number Density (#/m^2)')
-        ax.set_title(self._class_name + ' Rock Density Distribution\nFit: ' + self.ROCK_DENSITY_PROFILE.upper())
+        ax.set_title(self._class_name + ' Rock Density Distribution\nFit: ' + self.params.rock_density_profile.upper())
 
 
     #------------------------------------------
@@ -247,8 +254,8 @@ class Rocks:
     #
     def _sampleRockDiameters(self):
 
-        self._rock_calculator = RockSizeDistribution(self.ROCK_DENSITY_PROFILE,
-                                               a=self.MIN_DIAMETER_M, b=self.MAX_DIAMETER_M)
+        self._rock_calculator = RockSizeDistribution(self.params.rock_density_profile,
+                                               a=self.params.min_diameter_m, b=self.params.max_diameter_m)
 
         num_rocks = self._compute_num_rocks(self._rock_calculator)
 

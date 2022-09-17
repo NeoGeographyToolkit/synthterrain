@@ -17,7 +17,7 @@ class InterCraterRocks(rocks.Rocks):
     # @param terrain: the terrain specification
     #            class
     #
-    def __init__(self, raster):
+    def __init__(self, raster, params=rocks.RockParams(), rand_seed=None):
         super().__init__(raster)
         self._class_name = "Inter-Crater"
 
@@ -65,7 +65,7 @@ class InterCraterRocks(rocks.Rocks):
     def _compute_num_rocks(self, rock_calculator):
 
         # TODO: SHOULD WE SUBTRACT THE EJECTA CRATER AREA?
-        intercrater_area_sq_m = self._raster.area_sq_m * self.ROCK_AREA_SCALAR
+        intercrater_area_sq_m = self._raster.area_sq_m * self.params.rock_area_scaler
 
         rocks_per_m2 = rock_calculator.calculateDensity(self._diameter_range_m[0])
         num_rocks = round(rocks_per_m2 * intercrater_area_sq_m)
