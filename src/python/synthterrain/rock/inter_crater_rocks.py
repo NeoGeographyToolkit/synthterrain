@@ -30,7 +30,7 @@ class InterCraterRocks(rocks.Rocks):
     # @param self: 
     #
     def generate(self):
-        rocks.Rocks.generate(self, 0)
+        rocks.Rocks.generate(self)
 
     
     #------------------------------------------
