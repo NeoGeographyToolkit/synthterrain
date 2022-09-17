@@ -47,7 +47,7 @@ def arg_parser():
     )
     parser.add_argument(
         "-o", "--outfile",
-        required=True,
+        default=None,
         type=Path,
         help="Path to output file."
     )
@@ -107,6 +107,9 @@ def main():
     r.plotLocationProbabilityMap(3)
     r.plotLocations(4)
     #r.plot3()
+
+    if args.outfile:
+        r.writeXml(args.outfile)
 
     plt.show()
     return

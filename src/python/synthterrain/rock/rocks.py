@@ -63,10 +63,6 @@ class Rocks:
     # rock diameters that  will be generated (meters)
     MAX_DIAMETER_M = 2
 
-    # Output XML filename
-    OUTPUT_FILE = []
-
-
     # PROTECTED
 
     #------------------------------------------
@@ -117,10 +113,6 @@ class Rocks:
         self._sampleRockLocations()
         self._sampleRockDiameters()
         self._placeRocks()
-
-        if self.OUTPUT_FILE:
-            self.writeXml(self.OUTPUT_FILE);
-
     
     #------------------------------------------
     # @param self: 
@@ -230,13 +222,13 @@ class Rocks:
     # @param filename: the output filename
     #
     def writeXml(self, filename):
-        fid = open(filename, 'wb')
+        fid = open(filename, 'w')
         if not fid:
             raise Exception('\nUnable to open file ' + filename + 'n')
         
         fid.write('<?xml version="1.0" encoding="UTF-8"?>\n')
         fid.write('<RockList name="UserRocks">\n')
-        s = f'    <RockData diameter="{np.as_array(self.diameters_m)}" x="{self.positions_xy[:,0] + self._raster.origin[0]}" y="{self.positions_xy[:,1] + self_raster.origin[1]}"/>\n'
+        s = f'    <RockData diameter="{np.asarray(self.diameters_m)}" x="{self.positions_xy[:,0] + self._raster.origin[0]}" y="{self.positions_xy[:,1] + self._raster.origin[1]}"/>\n'
         fid.write(s),
         fid.write('</RockList>\n')
 
