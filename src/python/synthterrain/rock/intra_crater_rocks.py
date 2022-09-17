@@ -13,26 +13,13 @@ class IntraCraterRocks(rocks.Rocks):
     # contains the intra-crater rock distribution.
 
     #------------------------------------------
-    # Tunable parameters
-    
-# TODO: Load these from input parameters!
-
-    EJECTA_EXTENT = 1
-
-    # Determines how quickly the rock density
-    # decreases beyond the rim of a crater
-    EJECTA_SHARPNESS = 1
-
-    ROCK_AGE_DECAY = 3
-        
-    #------------------------------------------
     # Constructor
     # 
     # @param terrain: the terrain specification
     #            class
     #_location_probability_map
-    def __init__(self, raster):
-        super().__init__(raster)
+    def __init__(self, raster, params=rocks.RockParams(), rand_seed=None):
+        super().__init__(raster, params, rand_seed)
         self._craters = None
         self._class_name = "Intra-Crater"
 
@@ -88,7 +75,7 @@ class IntraCraterRocks(rocks.Rocks):
 
             # Further than 1 crater radius from the rim, the ejecta field goes to 0
             outer_probability_map = np.where(
-              d > (self.EJECTA_EXTENT +1) * crater_radius_m,
+              d > (self.params.ejecta_extent +1) * crater_radius_m,
               0,
               outer_probability_map) # sizeof dem
 
@@ -112,7 +99,7 @@ class IntraCraterRocks(rocks.Rocks):
             # Add densities to total map
             # Rocks at interior of crater replace, ejecta field adds
             self._location_probability_map = (self._location_probability_map + 
-                np.power(age_diff, self.ROCK_AGE_DECAY) * outer_probability_map)
+                np.power(age_diff, self.params.rock_age_decay) * outer_probability_map)
         print('zero sum crater percentage = ' + str(zero_sum_craters / num_craters))
     
 
@@ -124,7 +111,7 @@ class IntraCraterRocks(rocks.Rocks):
     #
     def _compute_num_rocks(self, rock_calculator):
 
-        intercrater_area_sq_m = self._raster.area_sq_m * self.ROCK_AREA_SCALAR
+        intercrater_area_sq_m = self._raster.area_sq_m * self.params.rock_area_scaler
 
         eps = 2.2204e-16
         threshold_values = np.where(self._location_probability_map > eps, self._location_probability_map, 0)
@@ -140,7 +127,7 @@ class IntraCraterRocks(rocks.Rocks):
         else:
             intracrater_area_sq_m = direct_rock_area_sq_m
 
-        rocks_per_m2 = rock_calculator.calculateDensity(self.MIN_DIAMETER_M)
+        rocks_per_m2 = rock_calculator.calculateDensity(self.params.min_diameter_m)
 
         num_rocks = int(np.round(rocks_per_m2 * intracrater_area_sq_m))
 
@@ -158,7 +145,7 @@ class IntraCraterRocks(rocks.Rocks):
     # @return result:
     #
     def _outerProbability(self, d, crater_radius_m):
-        return np.exp(- self.EJECTA_SHARPNESS * d / (crater_radius_m * 0.7))
+        return np.exp(- self.params.ejecta_sharpness * d / (crater_radius_m * 0.7))
 
     #------------------------------------------
     # Inner crater rock probability map def
