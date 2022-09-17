@@ -11,7 +11,6 @@
 
 import logging
 from pathlib import Path
-#from re import T
 import matplotlib.pyplot as plt
 import sys
 
@@ -78,7 +77,7 @@ def main():
     #canvas = box(*args.bbox)
 
     # Do generic rock distro across bbox.
-    RESOLUTION = 0.2
+    RESOLUTION = 0.8
     raster = rocks.Raster(origin = (args.bbox[0], args.bbox[3]),
                           nrows = (args.bbox[1] - args.bbox[3]) / RESOLUTION,
                           ncols = (args.bbox[2] - args.bbox[0]) / RESOLUTION,
@@ -95,11 +94,19 @@ def main():
         intra = intra_crater_rocks.IntraCraterRocks(raster)
         print('Generating rocks...')
         intra.generate(loaded_craters)
+        r = intra
     else:
         print('Constructing InterCraterRocks')
         inter = inter_crater_rocks.InterCraterRocks(raster)
         print('Generating rocks...')
         inter.generate()
+        r = inter
+
+    r.plotDensityDistribution(1)
+    r.plotDiameterDistributions(2)
+    r.plotLocationProbabilityMap(3)
+    r.plotLocations(4)
+    #r.plot3()
 
     plt.show()
     return

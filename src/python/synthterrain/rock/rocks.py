@@ -66,17 +66,6 @@ class Rocks:
     # Output XML filename
     OUTPUT_FILE = []
 
-    #------------------------------------------
-    # Plotting Flags
-
-    PLOT_DENSITY_DISTRIBUTION = True
-
-    PLOT_DIAMETER_DISTRIBUTION = True
-
-    PLOT_LOCATION_PROBABILITY_MAP = True
-
-    PLOT_LOCATIONS = True
-
 
     # PROTECTED
 
@@ -89,10 +78,11 @@ class Rocks:
     def __init__(self, raster):
         self._raster = raster
         self._diameter_range_m = None
-        self._diameters_m = None
+        self.diameters_m = None
         self._location_probability_map = None
         self.positions_xy = None
         self._class_name = "BASE" # Should be set by derived class
+        self._rock_calculator = None
 
         if self.RAND_SEED:
             self._random_generator = np.random.default_rng(seed = self.RAND_SEED)
@@ -107,14 +97,14 @@ class Rocks:
     # @param self:
     # @param plot_start_index:
     #
-    def generate(self, plot_start_index):
+    def generate(self):
         
         # Generate range [self.MIN_DIAMETER_M, self.MAX_DIAMETER_M] inclusive
         self._diameter_range_m = np.arange(self.MIN_DIAMETER_M,
             self.MAX_DIAMETER_M+self.DELTA_DIAMETER_M,
             self.DELTA_DIAMETER_M)
 
-        self._diameters_m = []
+        self.diameters_m = []
         self.positions_xy = []
         self._location_probability_map = []
 
@@ -126,7 +116,7 @@ class Rocks:
         
         self._sampleRockLocations()
         self._sampleRockDiameters()
-        self._placeRocks(plot_start_index)
+        self._placeRocks()
 
         if self.OUTPUT_FILE:
             self.writeXml(self.OUTPUT_FILE);
@@ -138,16 +128,15 @@ class Rocks:
     # @param rev_cum_dist:
     # @param profile:
     #
-    def plotDensityDistribution(self, figureNumber, rock_calculator, profile):
-        if self.PLOT_DENSITY_DISTRIBUTION:
-            fig = plt.figure(figureNumber)
-            ax = fig.add_subplot(111)
-            ax.clear()
-            densities = rock_calculator.calculateDensity(self._diameter_range_m)
-            ax.loglog(self._diameter_range_m, densities, 'r+')
-            ax.set_xlabel('Rock Diameter (m)')
-            ax.set_ylabel('Cumulative Rock Number Density (#/m^2)')
-            ax.set_title(self._class_name + ' Rock Density Distribution\nFit: ' + profile.upper())
+    def plotDensityDistribution(self, figureNumber):
+        fig = plt.figure(figureNumber)
+        ax = fig.add_subplot(111)
+        ax.clear()
+        densities = self._rock_calculator.calculateDensity(self._diameter_range_m)
+        ax.loglog(self._diameter_range_m, densities, 'r+')
+        ax.set_xlabel('Rock Diameter (m)')
+        ax.set_ylabel('Cumulative Rock Number Density (#/m^2)')
+        ax.set_title(self._class_name + ' Rock Density Distribution\nFit: ' + self.ROCK_DENSITY_PROFILE.upper())
 
 
     #------------------------------------------
@@ -157,13 +146,19 @@ class Rocks:
     # @param prior_sample_hist:
     # @param final_sample_hist:
     #
-    def plotDiameterDistributions(self, figureNumber, ideal_sample_hist, prior_sample_hist, final_sample_hist):
+    def plotDiameterDistributions(self, figureNumber):
+
+        num_rocks = len(self.diameters_m)
+        prob_dist = self._rock_calculator.pdf(self._diameter_range_m)
+        prob_dist = prob_dist / np.sum(prob_dist) # This is scaled by self.DELTA_DIAMETER_M
+        ideal_sample_hist = num_rocks * prob_dist[:-1]
+        final_sample_hist = np.histogram(self.diameters_m, self._diameter_range_m)
+
         fig = plt.figure(figureNumber)
         ax = fig.add_subplot(111)
         ax.clear()
         ax.loglog(self._diameter_range_m[:-1], ideal_sample_hist, 'r+')
-        ax.loglog(self._diameter_range_m[:-1], prior_sample_hist, 'g.')
-        ax.loglog(self._diameter_range_m[:-1], final_sample_hist, 'bo')
+        ax.loglog(self._diameter_range_m[:-1], final_sample_hist[0], 'bo')
         ax.set_xlabel('Rock Diameter (m)')
         ax.set_ylabel('Rock Count')
         ax.set_title(self._class_name + ' Rock Diameter Distribution')
@@ -199,7 +194,7 @@ class Rocks:
     # @param figureNumber:
     #
     def plotLocations(self, figureNumber):
-        num_rocks = len(self._diameters_m)
+        num_rocks = len(self.diameters_m)
 
         xy = utilities.downSample(self.positions_xy, 20000)[0]
         color = 'b'
@@ -241,7 +236,7 @@ class Rocks:
         
         fid.write('<?xml version="1.0" encoding="UTF-8"?>\n')
         fid.write('<RockList name="UserRocks">\n')
-        s = f'    <RockData diameter="{np.as_array(self._diameters_m)}" x="{self.positions_xy[:,0] + self._raster.origin[0]}" y="{self.positions_xy[:,1] + self_raster.origin[1]}"/>\n'
+        s = f'    <RockData diameter="{np.as_array(self.diameters_m)}" x="{self.positions_xy[:,0] + self._raster.origin[0]}" y="{self.positions_xy[:,1] + self_raster.origin[1]}"/>\n'
         fid.write(s),
         fid.write('</RockList>\n')
 
@@ -260,33 +255,17 @@ class Rocks:
     #
     def _sampleRockDiameters(self):
 
-        rock_calculator = RockSizeDistribution(self.ROCK_DENSITY_PROFILE,
+        self._rock_calculator = RockSizeDistribution(self.ROCK_DENSITY_PROFILE,
                                                a=self.MIN_DIAMETER_M, b=self.MAX_DIAMETER_M)
 
-        num_rocks = self._compute_num_rocks(rock_calculator)
-
-        if self.PLOT_DENSITY_DISTRIBUTION:
-            self.plotDensityDistribution(11, rock_calculator, self.ROCK_DENSITY_PROFILE);
+        num_rocks = self._compute_num_rocks(self._rock_calculator)
 
         # Generate probability distribution
         # Sample the rocks sizes randomly
 
         SEED = 13492463493612533854268 # TODO: Do we want a constant seed?
         rng_gen = np.random.default_rng(SEED)
-        self._diameters_m = rock_calculator.rvs(size=num_rocks, random_state=rng_gen, scale=1)
-
-        prob_dist = rock_calculator.pdf(self._diameter_range_m)
-        prob_dist = prob_dist / np.sum(prob_dist) # This is scaled by self.DELTA_DIAMETER_M
-        ideal_sample_hist = num_rocks * prob_dist[:-1]
-        final_sample_hist = np.histogram(self._diameters_m, self._diameter_range_m)
-
-        if self.PLOT_DIAMETER_DISTRIBUTION:
-            self.plotDiameterDistributions(
-                12,
-                ideal_sample_hist,
-                ideal_sample_hist,
-                final_sample_hist[0])
-
+        self.diameters_m = self._rock_calculator.rvs(size=num_rocks, random_state=rng_gen, scale=1)
 
     #------------------------------------------
     # Places rocks according to the location
@@ -294,12 +273,9 @@ class Rocks:
     # 
     # @param self:
     #
-    def _placeRocks(self, figure_offset=0):
+    def _placeRocks(self):
 
-        if self.PLOT_LOCATION_PROBABILITY_MAP:
-            self.plotLocationProbabilityMap(13 + figure_offset)
-
-        num_rocks = len(self._diameters_m)
+        num_rocks = len(self.diameters_m)
 
         # Sample rough probability map first 
         # the probability map is voxelized, so we'll get 
@@ -334,9 +310,6 @@ class Rocks:
         rock_pos_y = np.mod(rock_pos_y + delta_pos[1,:], self._raster.dem_size_m[1])
 
         self.positions_xy = np.stack((rock_pos_x, rock_pos_y))
-
-        if self.PLOT_LOCATIONS:
-            self.plotLocations(14 + figure_offset)
 
 
 # End class Rocks

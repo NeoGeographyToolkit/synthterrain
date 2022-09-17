@@ -50,7 +50,7 @@ class IntraCraterRocks(rocks.Rocks):
     #
     def generate(self, craters):
         self._craters = craters
-        rocks.Rocks.generate(self, 10)
+        rocks.Rocks.generate(self)
 
     
     # PROTECTED
