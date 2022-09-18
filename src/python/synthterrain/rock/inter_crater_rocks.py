@@ -5,39 +5,24 @@ from synthterrain.rock import rocks
 from synthterrain.rock import utilities
 
 class InterCraterRockGenerator(rocks.RockGenerator):
-    # Inter-Crater rock distribution generator
-    # The inter-crater rock distribution specifications 
-    # are set via the tunable parameters. The generate()
-    # def then produces an XML output file that
-    # contains the inter-crater rock distribution.
+    """Inter-Crater rock distribution generator
+       The inter-crater rock distribution specifications are set via the
+       tunable parameters. The generate() def then produces an XML
+       output file that contains the inter-crater rock distribution.
+    """
 
-    #------------------------------------------
-    # Constructor
-    # 
-    # @param terrain: the terrain specification
-    #            class
-    #
     def __init__(self, raster, params=rocks.RockParams(), rand_seed=None):
         super().__init__(raster)
         self._class_name = "Inter-Crater"
 
-    #------------------------------------------
-    # Generates an inter-crater rock distribution 
-    # XML file. self def should be called 
-    # after all tunable parameters have been set.
-    #
-    # @param self: 
-    #
+
     def generate(self):
+        """Performs internal computations"""
         rocks.RockGenerator.generate(self)
 
-    #------------------------------------------
-    # Creates a probability distribution of 
-    # locations
-    # 
-    # @param self: 
-    #
+
     def _generate_location_probability_map(self):
+        """Creates a probability distribution of locations"""
         
         if self._raster.dem_size_pixels[0] < 10 or self._raster.dem_size_pixels[1] < 10:
             location_probability_map = np.ones(self._raster.dem_size_pixels)
@@ -54,13 +39,11 @@ class InterCraterRockGenerator(rocks.RockGenerator):
                                                 location_probability_map, 0)
         return location_probability_map
     
-    #------------------------------------------
-    # Compute the number of rocks and the cumulative distribution
-    # 
-    # @param self:
-    # @param rock_calculator: RockSizeDistribution instance
-    #
+
     def _compute_num_rocks(self, rock_calculator):
+        """Compute the number of rocks and the cumulative distribution
+           @param rock_calculator: RockSizeDistribution instance
+        """
 
         # TODO: SHOULD WE SUBTRACT THE EJECTA CRATER AREA?
         intercrater_area_sq_m = self._raster.area_sq_m * self.params.rock_area_scaler
