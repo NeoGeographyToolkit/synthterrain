@@ -14,11 +14,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import sys
 
-# TODO: Clean up includes
-#from matplotlib.pyplot import figure
-
-#from shapely.geometry import box
-
 import synthterrain.util as util
 import synthterrain.crater as crater
 

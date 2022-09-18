@@ -27,7 +27,7 @@ class Raster:
 
 
 class RockParams:
-    '''Class containing all Rock class configurable parameters '''
+    """Class containing all Rock class configurable parameters"""
     def __init__(self):
 
         # Limit on how far randomly drawn values
@@ -69,15 +69,10 @@ class RockParams:
 
 
 class RockGenerator:
-    '''Base class for rock distribution generators'''
+    """Base class for rock distribution generators"""
 
-    #------------------------------------------
-    # Constructor
-    #
-    # @param terrain: the terrain specification
-    #            class
-    #
     def __init__(self, raster, params=RockParams(), rand_seed=None):
+        """Constructor"""
         self.params = params
         self.positions_xy = []
         self.diameters_m = []
@@ -93,14 +88,9 @@ class RockGenerator:
         else:
             self._random_generator = np.random.default_rng()
 
-    #------------------------------------------
-    # Subclasses should call self def from 
-    # their own generate defs
-    #
-    # @param self:
-    # @param plot_start_index:
-    #
+
     def generate(self):
+        """Subclasses should call self def from their own generate defs"""
         
         # Generate range [self.params.min_diameter_m, self.params.max_diameter_m] inclusive
         self._diameter_range_m = np.arange(self.params.min_diameter_m,
@@ -122,13 +112,9 @@ class RockGenerator:
 
         self.positions_xy = self._select_rock_positions()
 
-    #------------------------------------------
-    # Places rocks according to the location
-    # probability distribution
-    #
-    # @param self:
-    #
+
     def _select_rock_positions(self):
+        """Places rocks according to the location probability distribution"""
 
         num_rocks = len(self.diameters_m)
 
@@ -167,18 +153,15 @@ class RockGenerator:
         positions_xy = np.stack((rock_pos_x, rock_pos_y))
         return positions_xy
 
-    # Must be defined by child classes
-    # @return num_rocks
     def _compute_num_rocks(self, rock_calculator):
+        """Must be defined by child classes
+           @return num_rocks
+        """
         pass
 
-    #------------------------------------------
-    # @param self: 
-    # @param figureNumber:
-    # @param rev_cum_dist:
-    # @param profile:
-    #
+
     def plotDensityDistribution(self, figureNumber):
+
         fig = plt.figure(figureNumber)
         ax = fig.add_subplot(111)
         ax.clear()
@@ -189,13 +172,6 @@ class RockGenerator:
         ax.set_title(self._class_name + ' Rock Density Distribution\nFit: ' + self.params.rock_density_profile.upper())
 
 
-    #------------------------------------------
-    # @param self: 
-    # @param figureNumber:
-    # @param ideal_sample_hist:
-    # @param prior_sample_hist:
-    # @param final_sample_hist:
-    #
     def plotDiameterDistributions(self, figureNumber):
 
         num_rocks = len(self.diameters_m)
@@ -216,11 +192,8 @@ class RockGenerator:
         ax.legend(['Ideal', 'Prior Sampled', 'Final Sampled'])
 
     
-    #------------------------------------------
-    # @param self:
-    # @param figureNumber:
-    #
     def plotLocationProbabilityMap(self, figureNumber):
+
         fig = plt.figure(figureNumber)
         ax = fig.add_subplot(111)
         ax.clear()
@@ -239,13 +212,9 @@ class RockGenerator:
         fig.colorbar(im, cax=cax, orientation='vertical')
 
 
-    #------------------------------------------
-    # @param self:
-    # @param figureNumber:
-    #
     def plotLocations(self, figureNumber):
-        num_rocks = len(self.diameters_m)
 
+        num_rocks = len(self.diameters_m)
         xy = utilities.downSample(self.positions_xy, 20000)[0]
         color = 'b'
 
@@ -260,13 +229,11 @@ class RockGenerator:
         ax.set_xlim([0, self._raster.dem_size_m[0]])
         ax.set_ylim([0, self._raster.dem_size_m[1]])
     
-    #------------------------------------------
-    # Write the output XML rock distribution file
-    # 
-    # @param self: 
-    # @param filename: the output filename
-    #
+
     def writeXml(self, filename):
+        """Write the output XML rock distribution file
+           @param filename: the output filename
+        """
         fid = open(filename, 'w')
         if not fid:
             raise Exception('\nUnable to open file ' + filename + 'n')
@@ -279,28 +246,25 @@ class RockGenerator:
 
 # End class Rocks
 
-
 #------------------------------------------
-# Rock density def
-# from VIPER-MSE-SPEC-001 (2/13/2020)
-# 
-# calculateDensity is equivalent CSFD (crater distribution) but
-# for rocks.  See crater/functions.py for a more detailed description of CSFD
-class RockSizeDistribution(rv_continuous):
 
-    # @param profile: 'intercrater',
-    #                 'intercrater2', or
-    #                 'haworth'
+class RockSizeDistribution(rv_continuous):
+    """Rock density def from VIPER-MSE-SPEC-001 (2/13/2020)
+       calculateDensity is equivalent CSFD (crater distribution) but
+       for rocks.  See crater/functions.py for a more detailed description of CSFD
+    """
+
     def __init__(self, profile, **kwargs):
+        """@param profile: 'intercrater', 'intercrater2', or 'haworth'"""
         self._profile = profile.lower()
         super().__init__(**kwargs)
 
-    # @param diameter_m: rock diameter(s) in meters
-    # @return num_rocks_per_square_m:
-    #         the number of rocks with diameters
-    #         greater than or equal to the input
-    #         argument per square METER
+
     def calculateDensity(self, diameter_m):
+        """@param diameter_m: rock diameter(s) in meters
+           @return num_rocks_per_square_m: the number of rocks with diameters
+                   greater than or equal to the input argument per square METER
+        """
 
         if self._profile == 'intercrater':
             # Low blockiness cases

@@ -1,49 +1,33 @@
 #!/usr/bin/env python3
 
-import math
 import numpy as np
 from synthterrain.rock import rocks
 
 class IntraCraterRockGenerator(rocks.RockGenerator):
-    # Intra-Crater rock distribution generator
-    # The intra-crater rock distribution specifications 
-    # are set via the tunable parameters. The generate()
-    # def then produces an XML output file that
-    # contains the intra-crater rock distribution.
+    """Intra-Crater rock distribution generator
+       The intra-crater rock distribution specifications
+       are set via the tunable parameters. The generate()
+       def then produces an XML output file that
+       contains the intra-crater rock distribution.
+    """
 
-    #------------------------------------------
-    # Constructor
-    # 
-    # @param terrain: the terrain specification
-    #            class
-    #_location_probability_map
     def __init__(self, raster, params=rocks.RockParams(), rand_seed=None):
         super().__init__(raster, params, rand_seed)
         self._craters = None
         self._class_name = "Intra-Crater"
 
-    #------------------------------------------
-    # Generates an intra-crater rock distribution 
-    # XML file. self def should be called 
-    # after all tunable parameters have been set.
-    #
-    # @param self: 
-    # @param craters: the crater distribution
-    #            generator class containing the 
-    #            the crater distribution 
-    #            specifications
-    #
+
     def generate(self, craters):
+        """Performs internal computations.
+           @param craters: The crater distribution generator class containing the 
+                           the crater distribution  specifications
+        """
         self._craters = craters
         rocks.RockGenerator.generate(self)
 
-    #------------------------------------------
-    # Creates a probability distribution of 
-    # locations
-    # 
-    # @param self: 
-    #
+
     def _generate_location_probability_map(self):
+        """Creates a probability distribution of locations"""
         
         s = (self._raster.dem_size_pixels[1], self._raster.dem_size_pixels[0])
         location_probability_map = np.zeros(s, 'single')
@@ -98,13 +82,11 @@ class IntraCraterRockGenerator(rocks.RockGenerator):
         print('zero sum crater percentage = ' + str(zero_sum_craters / num_craters))
         return location_probability_map
 
-    #------------------------------------------
-    # Compute the number of rocks and the cumulative distribution
-    # 
-    # @param self:
-    # @param rock_calculator: RockSizeDistribution instance
-    #
+
     def _compute_num_rocks(self, rock_calculator):
+        """Compute the number of rocks and the cumulative distribution
+           @param rock_calculator: RockSizeDistribution instance
+        """
 
         intercrater_area_sq_m = self._raster.area_sq_m * self.params.rock_area_scaler
 
@@ -128,28 +110,21 @@ class IntraCraterRockGenerator(rocks.RockGenerator):
 
         return num_rocks
 
-    # PRIVATE
-    
-    #------------------------------------------
-    # Outer crater rock probability map def
-    # Ejecta field is exponential decay
-    # 
-    # @param self: 
-    # @param d: distance array (sizeof terrain DEM)
-    # @param crater_radius_m:
-    # @return result:
-    #
+
     def _outerProbability(self, d, crater_radius_m):
+        """Outer crater rock probability map def
+           Ejecta field is exponential decay
+
+           @param d: distance array (sizeof terrain DEM)
+           @param crater_radius_m:
+        """
         return np.exp(- self.params.ejecta_sharpness * d / (crater_radius_m * 0.7))
 
-    #------------------------------------------
-    # Inner crater rock probability map def
-    # Ejecta field is uniform
-    # 
-    # @param self: 
-    # @param d: distance array (sizeof terrain DEM)
-    # @param crater_radius_m:
-    # @return result:
-    #
     def _innerProbability(self, d, crater_radius_m):
+        """Inner crater rock probability map def
+           Ejecta field is uniform
+
+           @param d: distance array (sizeof terrain DEM)
+           @param crater_radius_m:
+        """
         return d < crater_radius_m
