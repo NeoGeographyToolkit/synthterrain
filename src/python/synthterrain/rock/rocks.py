@@ -27,6 +27,7 @@ class Raster:
 
 
 class RockParams:
+    '''Class containing all Rock class configurable parameters '''
     def __init__(self):
 
         # Limit on how far randomly drawn values
@@ -67,10 +68,8 @@ class RockParams:
         self.rock_age_decay = 3
 
 
-class Rocks:
-    # Base class for rock distribution generators
-
-    # PROTECTED
+class RockGenerator:
+    '''Base class for rock distribution generators'''
 
     #------------------------------------------
     # Constructor
@@ -80,11 +79,12 @@ class Rocks:
     #
     def __init__(self, raster, params=RockParams(), rand_seed=None):
         self.params = params
+        self.positions_xy = []
+        self.diameters_m = []
+
         self._raster = raster
         self._diameter_range_m = None
-        self.diameters_m = None
-        self._location_probability_map = None
-        self.positions_xy = None
+        self._location_probability_map = []
         self._class_name = "BASE" # Should be set by derived class
         self._rock_calculator = None
 
@@ -107,20 +107,71 @@ class Rocks:
             self.params.max_diameter_m+self.params.delta_diameter_m,
             self.params.delta_diameter_m)
 
-        self.diameters_m = []
-        self.positions_xy = []
-        self._location_probability_map = []
-
         print('\n\n***** ' + self._class_name + ' Rocks *****')
         print('\nRock Density Profile: ' + str(self.params.rock_density_profile))
         print('\nMin    rock diameter: ' + str(self.params.min_diameter_m) + ' m')
         print('\nDelta  rock diameter: ' + str(self.params.delta_diameter_m) + ' m')
         print('\nMax    rock diameter: ' + str(self.params.max_diameter_m) + ' m')
         
-        self._sampleRockLocations()
-        self._sampleRockDiameters()
-        self._placeRocks()
-    
+        self._location_probability_map = self._generate_location_probability_map()
+
+        self._rock_calculator = RockSizeDistribution(self.params.rock_density_profile,
+                                               a=self.params.min_diameter_m, b=self.params.max_diameter_m)
+        num_rocks = self._compute_num_rocks(self._rock_calculator)
+        self.diameters_m = self._rock_calculator.rvs(size=num_rocks, random_state=self._random_generator, scale=1)
+
+        self.positions_xy = self._select_rock_positions()
+
+    #------------------------------------------
+    # Places rocks according to the location
+    # probability distribution
+    #
+    # @param self:
+    #
+    def _select_rock_positions(self):
+
+        num_rocks = len(self.diameters_m)
+
+        # Sample rough probability map first
+        # the probability map is voxelized, so we'll get
+        # whole number positions from sampling it
+        prob_map_sum = np.sum(self._location_probability_map)
+
+        EPSILON = 0.0001
+        if prob_map_sum < EPSILON:
+            raise Exception('The sum of the location probability map is zero!')
+        flat_prob_map = self._location_probability_map.flatten() / prob_map_sum
+        rock_positions_idx = self._random_generator.choice(
+            range(0,len(flat_prob_map)),
+            num_rocks,
+            True, # Choose with replacement
+            flat_prob_map # Weights
+        )
+
+        # Convert from 1D to 2D indices
+        [rock_pos_y, rock_pos_x] = np.unravel_index(
+            rock_positions_idx, self._raster.dem_size_pixels)
+        # Convert to x,y offset from the origin
+        rock_pos_x = rock_pos_x * self._raster.resolution_m
+        rock_pos_y = rock_pos_y * self._raster.resolution_m
+
+        # Sample uniformly in the grid within each
+        # fractional voxel, decide where the rock goes
+        # (we dont want rocks placed only on whole
+        # number coordinates)
+        delta_pos = self._random_generator.random([2, num_rocks])
+
+        rock_pos_x = np.mod(rock_pos_x + delta_pos[0,:], self._raster.dem_size_m[0])
+        rock_pos_y = np.mod(rock_pos_y + delta_pos[1,:], self._raster.dem_size_m[1])
+
+        positions_xy = np.stack((rock_pos_x, rock_pos_y))
+        return positions_xy
+
+    # Must be defined by child classes
+    # @return num_rocks
+    def _compute_num_rocks(self, rock_calculator):
+        pass
+
     #------------------------------------------
     # @param self: 
     # @param figureNumber:
@@ -208,19 +259,6 @@ class Rocks:
 
         ax.set_xlim([0, self._raster.dem_size_m[0]])
         ax.set_ylim([0, self._raster.dem_size_m[1]])
-
-
-    #------------------------------------------
-    # @param self:
-    # @param z:
-    # @param color:
-    # @return h:
-    #
-    def plot3(self, z, color):
-        [xy,idx] = utilities.downSample(self.positions_xy, 20000)
-        h = plt.plot3(xy[:,0], xy[:,1], z[idx], 'o', 'MarkerSize', 1, 'Color', color, 'MarkerFaceColor',color)
-        return h
-
     
     #------------------------------------------
     # Write the output XML rock distribution file
@@ -238,78 +276,6 @@ class Rocks:
         s = f'    <RockData diameter="{np.asarray(self.diameters_m)}" x="{self.positions_xy[:,0] + self._raster.origin[0]}" y="{self.positions_xy[:,1] + self._raster.origin[1]}"/>\n'
         fid.write(s),
         fid.write('</RockList>\n')
-
-    # Must be defined by child classes
-    # @return num_rocks
-    def _compute_num_rocks(self, rock_calculator):
-        pass
-
-
-    #------------------------------------------
-    # Creates a probability distribution of 
-    # rock diameters then samples that distribution
-    # to select diameters for all rocks
-    # 
-    # @param self: 
-    #
-    def _sampleRockDiameters(self):
-
-        self._rock_calculator = RockSizeDistribution(self.params.rock_density_profile,
-                                               a=self.params.min_diameter_m, b=self.params.max_diameter_m)
-
-        num_rocks = self._compute_num_rocks(self._rock_calculator)
-
-        # Generate probability distribution
-        # Sample the rocks sizes randomly
-
-        SEED = 13492463493612533854268 # TODO: Do we want a constant seed?
-        rng_gen = np.random.default_rng(SEED)
-        self.diameters_m = self._rock_calculator.rvs(size=num_rocks, random_state=rng_gen, scale=1)
-
-    #------------------------------------------
-    # Places rocks according to the location
-    # probability distribution
-    # 
-    # @param self:
-    #
-    def _placeRocks(self):
-
-        num_rocks = len(self.diameters_m)
-
-        # Sample rough probability map first 
-        # the probability map is voxelized, so we'll get 
-        # whole number positions from sampling it
-        prob_map_sum = np.sum(self._location_probability_map)
-
-        EPSILON = 0.0001
-        if prob_map_sum < EPSILON:
-            raise Exception('The sum of the location probability map is zero!')
-        flat_prob_map = self._location_probability_map.flatten() / prob_map_sum
-        rock_positions_idx = self._random_generator.choice(
-            range(0,len(flat_prob_map)),
-            num_rocks,
-            True, # Choose with replacement
-            flat_prob_map # Weights
-        )
-
-        # Convert from 1D to 2D indices
-        [rock_pos_y, rock_pos_x] = np.unravel_index(
-            rock_positions_idx, self._raster.dem_size_pixels)
-        # Convert to x,y offset from the origin
-        rock_pos_x = rock_pos_x * self._raster.resolution_m
-        rock_pos_y = rock_pos_y * self._raster.resolution_m
-
-        # Sample uniformly in the grid within each 
-        # fractional voxel, decide where the rock goes 
-        # (we dont want rocks placed only on whole 
-        # number coordinates)
-        delta_pos = self._random_generator.random([2, num_rocks])
-
-        rock_pos_x = np.mod(rock_pos_x + delta_pos[0,:], self._raster.dem_size_m[0])
-        rock_pos_y = np.mod(rock_pos_y + delta_pos[1,:], self._raster.dem_size_m[1])
-
-        self.positions_xy = np.stack((rock_pos_x, rock_pos_y))
-
 
 # End class Rocks
 

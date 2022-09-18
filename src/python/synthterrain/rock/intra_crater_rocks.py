@@ -3,9 +3,8 @@
 import math
 import numpy as np
 from synthterrain.rock import rocks
-from synthterrain.rock import utilities
 
-class IntraCraterRocks(rocks.Rocks):
+class IntraCraterRockGenerator(rocks.RockGenerator):
     # Intra-Crater rock distribution generator
     # The intra-crater rock distribution specifications 
     # are set via the tunable parameters. The generate()
@@ -23,7 +22,6 @@ class IntraCraterRocks(rocks.Rocks):
         self._craters = None
         self._class_name = "Intra-Crater"
 
-    
     #------------------------------------------
     # Generates an intra-crater rock distribution 
     # XML file. self def should be called 
@@ -37,21 +35,18 @@ class IntraCraterRocks(rocks.Rocks):
     #
     def generate(self, craters):
         self._craters = craters
-        rocks.Rocks.generate(self)
+        rocks.RockGenerator.generate(self)
 
-    
-    # PROTECTED
-        
     #------------------------------------------
     # Creates a probability distribution of 
     # locations
     # 
     # @param self: 
     #
-    def _sampleRockLocations(self):
+    def _generate_location_probability_map(self):
         
         s = (self._raster.dem_size_pixels[1], self._raster.dem_size_pixels[0])
-        self._location_probability_map = np.zeros(s, 'single')
+        location_probability_map = np.zeros(s, 'single')
 
         num_craters = len(self._craters['x'])
         zero_sum_craters = 0
@@ -98,10 +93,10 @@ class IntraCraterRocks(rocks.Rocks):
 
             # Add densities to total map
             # Rocks at interior of crater replace, ejecta field adds
-            self._location_probability_map = (self._location_probability_map + 
+            location_probability_map = (location_probability_map +
                 np.power(age_diff, self.params.rock_age_decay) * outer_probability_map)
         print('zero sum crater percentage = ' + str(zero_sum_craters / num_craters))
-    
+        return location_probability_map
 
     #------------------------------------------
     # Compute the number of rocks and the cumulative distribution

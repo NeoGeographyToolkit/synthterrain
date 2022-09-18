@@ -4,7 +4,7 @@ import numpy as np
 from synthterrain.rock import rocks
 from synthterrain.rock import utilities
 
-class InterCraterRocks(rocks.Rocks):
+class InterCraterRockGenerator(rocks.RockGenerator):
     # Inter-Crater rock distribution generator
     # The inter-crater rock distribution specifications 
     # are set via the tunable parameters. The generate()
@@ -21,7 +21,6 @@ class InterCraterRocks(rocks.Rocks):
         super().__init__(raster)
         self._class_name = "Inter-Crater"
 
-
     #------------------------------------------
     # Generates an inter-crater rock distribution 
     # XML file. self def should be called 
@@ -30,31 +29,30 @@ class InterCraterRocks(rocks.Rocks):
     # @param self: 
     #
     def generate(self):
-        rocks.Rocks.generate(self)
+        rocks.RockGenerator.generate(self)
 
-    
     #------------------------------------------
     # Creates a probability distribution of 
     # locations
     # 
     # @param self: 
     #
-    def _sampleRockLocations(self):
+    def _generate_location_probability_map(self):
         
         if self._raster.dem_size_pixels[0] < 10 or self._raster.dem_size_pixels[1] < 10:
-            self._location_probability_map = np.ones(self._raster.dem_size_pixels)
+            location_probability_map = np.ones(self._raster.dem_size_pixels)
         else:
-            self._location_probability_map = self._random_generator.random(self._raster.dem_size_pixels)
+            location_probability_map = self._random_generator.random(self._raster.dem_size_pixels)
 
             # Perturb the density map locally with some 
             # perlin-like noise so rocks clump together more
-            self._location_probability_map = utilities.addGradientNoise(
-                self._location_probability_map, [0, 1])
+            location_probability_map = utilities.addGradientNoise(
+                location_probability_map, [0, 1])
 
             # Don't place rocks anywhere the probability is less than 0.5
-            self._location_probability_map = np.where(
-                self._location_probability_map < 0.5,
-                self._location_probability_map, 0)
+            location_probability_map = np.where(location_probability_map < 0.5,
+                                                location_probability_map, 0)
+        return location_probability_map
     
     #------------------------------------------
     # Compute the number of rocks and the cumulative distribution
