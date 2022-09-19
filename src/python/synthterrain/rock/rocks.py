@@ -153,6 +153,12 @@ class RockGenerator:
         positions_xy = np.stack((rock_pos_x, rock_pos_y))
         return positions_xy
 
+    def _generate_location_probability_map(self):
+        """Must be defined by child classes
+           @return the location probability map
+        """
+        pass
+
     def _compute_num_rocks(self, rock_calculator):
         """Must be defined by child classes
            @return num_rocks

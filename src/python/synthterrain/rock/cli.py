@@ -86,24 +86,21 @@ def main():
         print('Input crater info:')
         print(loaded_craters)
         print('Constructing IntraCraterRocks')
-        intra = intra_crater_rocks.IntraCraterRockGenerator(raster, rock_parameters)
-        print('Generating rocks...')
-        intra.generate(loaded_craters)
-        r = intra
+        generator = intra_crater_rocks.IntraCraterRockGenerator(raster, loaded_craters, rock_parameters)
     else:
         print('Constructing InterCraterRocks')
-        inter = inter_crater_rocks.InterCraterRockGenerator(raster, rock_parameters)
-        print('Generating rocks...')
-        inter.generate()
-        r = inter
+        generator = inter_crater_rocks.InterCraterRockGenerator(raster, rock_parameters)
 
-    r.plotDensityDistribution(1)
-    r.plotDiameterDistributions(2)
-    r.plotLocationProbabilityMap(3)
-    r.plotLocations(4)
+    print('Generating rocks...')
+    generator.generate()
+
+    generator.plotDensityDistribution(1)
+    generator.plotDiameterDistributions(2)
+    generator.plotLocationProbabilityMap(3)
+    generator.plotLocations(4)
 
     if args.outfile:
-        r.writeXml(args.outfile)
+        generator.writeXml(args.outfile)
 
     plt.show()
     return
