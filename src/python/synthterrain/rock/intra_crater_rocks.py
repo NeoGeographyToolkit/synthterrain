@@ -11,18 +11,17 @@ class IntraCraterRockGenerator(rocks.RockGenerator):
        contains the intra-crater rock distribution.
     """
 
-    def __init__(self, raster, params=rocks.RockParams(), rand_seed=None):
+    def __init__(self, raster, craters, params=rocks.RockParams(), rand_seed=None):
         super().__init__(raster, params, rand_seed)
-        self._craters = None
+        self._craters = craters
         self._class_name = "Intra-Crater"
 
 
-    def generate(self, craters):
+    def generate(self):
         """Performs internal computations.
            @param craters: The crater distribution generator class containing the 
                            the crater distribution  specifications
         """
-        self._craters = craters
         rocks.RockGenerator.generate(self)
 
 
