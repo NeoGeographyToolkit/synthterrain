@@ -38,17 +38,3 @@ class InterCraterRockGenerator(rocks.RockGenerator):
             location_probability_map = np.where(location_probability_map < 0.5,
                                                 location_probability_map, 0)
         return location_probability_map
-    
-
-    def _compute_num_rocks(self, rock_calculator):
-        """Compute the number of rocks and the cumulative distribution
-           @param rock_calculator: RockSizeDistribution instance
-        """
-
-        # TODO: SHOULD WE SUBTRACT THE EJECTA CRATER AREA?
-        intercrater_area_sq_m = self._raster.area_sq_m * self.params.rock_area_scaler
-
-        rocks_per_m2 = rock_calculator.calculateDensity(self._diameter_range_m[0])
-        num_rocks = round(rocks_per_m2 * intercrater_area_sq_m)
-
-        return num_rocks

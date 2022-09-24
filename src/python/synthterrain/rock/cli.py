@@ -18,8 +18,6 @@ import synthterrain.util as util
 import synthterrain.crater as crater
 
 from synthterrain.rock import rocks
-from synthterrain.rock import inter_crater_rocks
-from synthterrain.rock import intra_crater_rocks
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +30,8 @@ def arg_parser():
     parser.add_argument(
         "-c", "--crater",
         type=Path,
-        help="Crater file.  If provided, generate intra-crater rocks"
+        required=True,
+        help="Crater file"
     )
     parser.add_argument(
         "-x", "--xml",
@@ -81,15 +80,12 @@ def main():
     rock_parameters = rocks.RockParams()
 
     # New craters class
-    if args.crater:
-        loaded_craters = crater.from_file(str(args.crater))
-        print('Input crater info:')
-        print(loaded_craters)
-        print('Constructing IntraCraterRocks')
-        generator = intra_crater_rocks.IntraCraterRockGenerator(raster, loaded_craters, rock_parameters)
-    else:
-        print('Constructing InterCraterRocks')
-        generator = inter_crater_rocks.InterCraterRockGenerator(raster, rock_parameters)
+    
+    loaded_craters = crater.from_file(str(args.crater))
+    print('Input crater info:')
+    print(loaded_craters)
+    print('Constructing')
+    generator = rocks.RockGenerator(raster, loaded_craters, rock_parameters)
 
     print('Generating rocks...')
     generator.generate()

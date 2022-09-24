@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from synthterrain.rock import utilities
 
-
 class Raster:
     """Simple class containing a raster description"""
 
@@ -69,18 +68,18 @@ class RockParams:
 
 
 class RockGenerator:
-    """Base class for rock distribution generators"""
+    """Class for rock distribution generators"""
 
-    def __init__(self, raster, params=RockParams(), rand_seed=None):
+    def __init__(self, raster, craters, params=RockParams(), rand_seed=None):
         """Constructor"""
         self.params = params
         self.positions_xy = []
         self.diameters_m = []
 
         self._raster = raster
+        self._craters = craters
         self._diameter_range_m = None
         self._location_probability_map = []
-        self._class_name = "BASE" # Should be set by derived class
         self._rock_calculator = None
 
         if rand_seed:
@@ -97,21 +96,39 @@ class RockGenerator:
             self.params.max_diameter_m+self.params.delta_diameter_m,
             self.params.delta_diameter_m)
 
-        print('\n\n***** ' + self._class_name + ' Rocks *****')
+        print('\n\n***** Rock Generation *****')
         print('\nRock Density Profile: ' + str(self.params.rock_density_profile))
         print('\nMin    rock diameter: ' + str(self.params.min_diameter_m) + ' m')
         print('\nDelta  rock diameter: ' + str(self.params.delta_diameter_m) + ' m')
         print('\nMax    rock diameter: ' + str(self.params.max_diameter_m) + ' m')
         
-        self._location_probability_map = self._generate_location_probability_map()
+        # Generate and merge the inter/intra probabilities
+        inter_crater_probability = self._generate_inter_crater_location_probability_map()
+        intra_crater_probability = self._generate_intra_crater_location_probability_map()
+
+        self._location_probability_map = inter_crater_probability + intra_crater_probability
+        self._location_probability_map = utilities.rescale(self._location_probability_map, [0, 1.0])
 
         self._rock_calculator = RockSizeDistribution(self.params.rock_density_profile,
                                                a=self.params.min_diameter_m, b=self.params.max_diameter_m)
+        # TODO: More rocks?
         num_rocks = self._compute_num_rocks(self._rock_calculator)
         self.diameters_m = self._rock_calculator.rvs(size=num_rocks, random_state=self._random_generator, scale=1)
 
         self.positions_xy = self._select_rock_positions()
 
+
+    def _compute_num_rocks(self, rock_calculator):
+        """Compute the number of rocks and the cumulative distribution
+           @param rock_calculator: RockSizeDistribution instance
+        """
+
+        intercrater_area_sq_m = self._raster.area_sq_m * self.params.rock_area_scaler
+
+        rocks_per_m2 = rock_calculator.calculateDensity(self._diameter_range_m[0])
+        num_rocks = int(round(rocks_per_m2 * intercrater_area_sq_m))
+
+        return num_rocks
 
     def _select_rock_positions(self):
         """Places rocks according to the location probability distribution"""
@@ -153,19 +170,6 @@ class RockGenerator:
         positions_xy = np.stack((rock_pos_x, rock_pos_y))
         return positions_xy
 
-    def _generate_location_probability_map(self):
-        """Must be defined by child classes
-           @return the location probability map
-        """
-        pass
-
-    def _compute_num_rocks(self, rock_calculator):
-        """Must be defined by child classes
-           @return num_rocks
-        """
-        pass
-
-
     def plotDensityDistribution(self, figureNumber):
 
         fig = plt.figure(figureNumber)
@@ -175,7 +179,7 @@ class RockGenerator:
         ax.loglog(self._diameter_range_m, densities, 'r+')
         ax.set_xlabel('Rock Diameter (m)')
         ax.set_ylabel('Cumulative Rock Number Density (#/m^2)')
-        ax.set_title(self._class_name + ' Rock Density Distribution\nFit: ' + self.params.rock_density_profile.upper())
+        ax.set_title('Rock Density Distribution\nFit: ' + self.params.rock_density_profile.upper())
 
 
     def plotDiameterDistributions(self, figureNumber):
@@ -193,7 +197,7 @@ class RockGenerator:
         ax.loglog(self._diameter_range_m[:-1], final_sample_hist[0], 'bo')
         ax.set_xlabel('Rock Diameter (m)')
         ax.set_ylabel('Rock Count')
-        ax.set_title(self._class_name + ' Rock Diameter Distribution')
+        ax.set_title('Rock Diameter Distribution')
 
         ax.legend(['Ideal', 'Prior Sampled', 'Final Sampled'])
 
@@ -207,7 +211,7 @@ class RockGenerator:
         ax.set_xlabel('Terrain X (m)')
         ax.set_ylabel('Terrain Y (m)')
         #ax.set_zlabel('Terrain Z (m)') # TODO
-        ax.set_title(self._class_name + ' Rock Location Probability Map')
+        ax.set_title('Rock Location Probability Map')
 
         ax.set_xlim([0, self._raster.dem_size_m[0]])
         ax.set_ylim([0, self._raster.dem_size_m[1]])
@@ -230,7 +234,7 @@ class RockGenerator:
         ax.plot(xy[0,:], xy[1,:], 'o', markersize=1, color=color, markerfacecolor=color)
         ax.set_xlabel('Terrain X (m)')
         ax.set_ylabel('Terrain Y (m)')
-        ax.set_title(self._class_name + ' Rock Locations\nRock Count = ' + str(num_rocks))
+        ax.set_title('Rock Locations\nRock Count = ' + str(num_rocks))
 
         ax.set_xlim([0, self._raster.dem_size_m[0]])
         ax.set_ylim([0, self._raster.dem_size_m[1]])
@@ -249,6 +253,105 @@ class RockGenerator:
         s = f'    <RockData diameter="{np.asarray(self.diameters_m)}" x="{self.positions_xy[:,0] + self._raster.origin[0]}" y="{self.positions_xy[:,1] + self._raster.origin[1]}"/>\n'
         fid.write(s),
         fid.write('</RockList>\n')
+
+
+    def _generate_inter_crater_location_probability_map(self):
+        """Creates a probability distribution of locations"""
+        
+        if self._raster.dem_size_pixels[0] < 10 or self._raster.dem_size_pixels[1] < 10:
+            location_probability_map = np.ones(self._raster.dem_size_pixels)
+        else:
+            location_probability_map = self._random_generator.random(self._raster.dem_size_pixels)
+
+            # Perturb the density map locally with some 
+            # perlin-like noise so rocks clump together more
+            location_probability_map = utilities.addGradientNoise(
+                location_probability_map, [0, 1])
+
+            # Don't place rocks anywhere the probability is less than 0.5
+            location_probability_map = np.where(location_probability_map < 0.5,
+                                                location_probability_map, 0)
+        return location_probability_map
+
+
+
+    def _generate_intra_crater_location_probability_map(self):
+        """Creates a probability distribution of locations"""
+        
+        s = (self._raster.dem_size_pixels[1], self._raster.dem_size_pixels[0])
+        location_probability_map = np.zeros(s, 'single')
+
+        num_craters = len(self._craters['x'])
+        zero_sum_craters = 0
+        for i in range(0, num_craters):
+
+            # self is the euclidean distance from the center of the crater
+            m_pos = np.array([self._craters['x'][i], self._craters['y'][i]])
+            d = np.sqrt(
+                np.power(self._raster.xs + self._raster.origin[0] - m_pos[0], 2) +
+                np.power(self._raster.ys + self._raster.origin[1] - m_pos[1], 2)) # sizeof dem
+
+            # Convert diameter to radius for easier computation of distance (meters)
+            crater_radius_m = self._craters['diameter'][i] / 2
+
+            # Generate an exponentially decaying ejecta field around a crater
+            outer_probability_map = self._intra_crater_outer_probability(d, crater_radius_m) # sizeof dem
+            EPSILON = 0.001
+            if np.sum(outer_probability_map) < EPSILON:
+                zero_sum_craters += 1
+                continue
+
+            # Further than 1 crater radius from the rim, the ejecta field goes to 0
+            outer_probability_map = np.where(
+              d > (self.params.ejecta_extent +1) * crater_radius_m,
+              0,
+              outer_probability_map) # sizeof dem
+
+            # The inside of the crater has very low uniform ejecta
+            inner_probability_map = self._intra_crater_inner_probability(d, crater_radius_m) # sizeof dem, logical array
+            inner_strength = 0.05 * outer_probability_map.max()
+            outer_probability_map = np.where(
+                inner_probability_map == 1,
+                inner_strength,
+                outer_probability_map)
+            # Do we need a min(densities inner) here to check against falloff > 1
+            # which increases the center rate?
+
+            # TODO: Resolve this difference between old and new craters class
+            # The rock density is inverse of the crater age,
+            # which simulates buried rocks from old craters
+            #age_diff = 1 - self._craters.ages(self.craters.ejecta_crater_indices(i));
+            age_diff = 1 - self._craters['age'][i]
+            age_diff = 1 - 0.1 # TODO!!!
+
+            # Add densities to total map
+            # Rocks at interior of crater replace, ejecta field adds
+            location_probability_map = (location_probability_map +
+                np.power(age_diff, self.params.rock_age_decay) * outer_probability_map)
+        print('zero sum crater percentage = ' + str(zero_sum_craters / num_craters))
+        return location_probability_map
+
+
+    def _intra_crater_outer_probability(self, d, crater_radius_m):
+        """Outer crater rock probability map def
+           Ejecta field is exponential decay
+
+           @param d: distance array (sizeof terrain DEM)
+           @param crater_radius_m:
+        """
+        return np.exp(- self.params.ejecta_sharpness * d / (crater_radius_m * 0.7))
+
+    def _intra_crater_inner_probability(self, d, crater_radius_m):
+        """Inner crater rock probability map def
+           Ejecta field is uniform
+
+           @param d: distance array (sizeof terrain DEM)
+           @param crater_radius_m:
+        """
+        return d < crater_radius_m
+
+
+
 
 # End class Rocks
 
