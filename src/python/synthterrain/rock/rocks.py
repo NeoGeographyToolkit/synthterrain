@@ -4,6 +4,7 @@ import numpy as np
 from scipy.stats import rv_continuous
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import opensimplex
 from synthterrain.rock import utilities
 
 class Raster:
@@ -106,8 +107,7 @@ class RockGenerator:
         inter_crater_probability = self._generate_inter_crater_location_probability_map()
         intra_crater_probability = self._generate_intra_crater_location_probability_map()
 
-        self._location_probability_map = inter_crater_probability + intra_crater_probability
-        self._location_probability_map = utilities.rescale(self._location_probability_map, [0, 1.0])
+        self._location_probability_map = (inter_crater_probability + intra_crater_probability) / 2.0
 
         self._rock_calculator = RockSizeDistribution(self.params.rock_density_profile,
                                                a=self.params.min_diameter_m, b=self.params.max_diameter_m)
@@ -267,6 +267,14 @@ class RockGenerator:
             # perlin-like noise so rocks clump together more
             location_probability_map = utilities.addGradientNoise(
                 location_probability_map, [0, 1])
+
+            noise = opensimplex.noise2array(
+                np.arange(0, self._raster.dem_size_m[0], self._raster.resolution_m),
+                np.arange(0, self._raster.dem_size_m[1], self._raster.resolution_m)
+                #np.arange(0, self._raster.dem_size_pixels[0], 1.0),
+                #np.arange(0, self._raster.dem_size_pixels[1], 1.0)
+            )
+            #location_probability_map = (noise + 1.0) / 2.0
 
             # Don't place rocks anywhere the probability is less than 0.5
             location_probability_map = np.where(location_probability_map < 0.5,
