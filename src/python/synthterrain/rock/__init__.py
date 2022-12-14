@@ -238,6 +238,10 @@ def random_probability_map(rows, cols, seed=None):
         noise = opensimplex.noise2array(np.arange(cols), np.arange(rows))
         p_map = (noise + 1) / 2  # noise runs from -1 to +1
 
+        # Don't place rocks anywhere the probability is
+        # less than 0.5 to make things more "clumpy" I guess?
+        p_map = np.where(p_map > 0.5, p_map, 0)
+
     return p_map / np.sum(p_map)
 
 
