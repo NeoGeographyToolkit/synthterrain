@@ -613,7 +613,7 @@ class Grun(Interp_Distribution):
         # Housen & Holsapple (2011) scaling.
         diameters = Grun.hoho_diameter(radii, masses / 1000, rho / 1000)
 
-        # # The above largest diameter only gets you 2.5 m diameter craters.  And
+        # # The above largest diameter only gets you 2.7636 m diameter craters.  And
         # # Neukum doesn't start until 10 m, so we're going to pick out some
         # # diameters from Neukum to add to these so that the polynomial in Grun()
         # # spans the space.
@@ -837,7 +837,7 @@ class GNPF(NPF):
     """
 
     def __init__(self, a, b, **kwargs):
-        if b <= 10:
+        if b <= 2.76:
             raise ValueError(
                 f"The upper bound, b, is {b}, you should use Grun, not GNPF."
             )
