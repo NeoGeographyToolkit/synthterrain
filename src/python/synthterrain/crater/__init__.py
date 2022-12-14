@@ -41,17 +41,12 @@ def synthesize(
        synthesized from the input parameters.
     """
     if production_fn is None:
-        if crater_dist.a < 10 < crater_dist.b:
-            production_fn = functions.GNPF(a=crater_dist.a, b=crater_dist.b)
-        elif crater_dist.a >= 10:
+        if crater_dist.a >= 10:
             production_fn = functions.NPF(a=crater_dist.a, b=crater_dist.b)
-        elif crater_dist.b <= 10:
+        elif crater_dist.b <= 2.76:
             production_fn = functions.Grun(a=crater_dist.a, b=crater_dist.b)
         else:
-            raise ValueError(
-                "Could not automatically determine a production function, "
-                "please provide one explicitly."
-            )
+            production_fn = functions.GNPF(a=crater_dist.a, b=crater_dist.b)
     logger.info(f"Production function is {production_fn.__class__}")
 
     # Get craters
