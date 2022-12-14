@@ -13,11 +13,6 @@ It currently contains only Python code, but we anticipate the addition of C++
 for certain functionality.
 
 
-.. * Free software: Apache 2 License
-..
-..    * Documentation: https://synthterrain.readthedocs.io.
-
-
 Features
 --------
 
@@ -37,7 +32,7 @@ can be found by running any program with a ``-h`` flag.
     Converts between the current crater CSV and old XML MATLAB formats.
 
 ``craterplot``
-    Generates a set of plots from the CSV output of `synthcraters`.
+    Generates a set of plots from the CSV output of ``synthcraters``.
 
 Contributing
 ------------

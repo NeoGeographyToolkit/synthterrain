@@ -77,7 +77,7 @@ Ready to contribute? Here's how to set up `synthterrain` for local development.
     $ pip install opensimplex
     $ pip install --no-deps -e .
 
-   The last `pip install` installs synthterrain in "editable" mode which facilitates using the programs and testing.
+   The last ``pip install`` installs synthterrain in "editable" mode which facilitates using the programs and testing.
 
 4. Create a branch for local development::
 
