@@ -99,17 +99,6 @@ def craters_probability_map(
     for row in df.itertuples(index=False):
         outer, inner = crater_probability_map(row.diameter / abs(transform.a))
 
-        # Need to determine scheme for reducing the outer and inner maps relative
-        # to their age, but original code was actually based on d/D and otherwise
-        # backwards (more degraded craters had larger probability multipliers.
-        age_multiplier = np.power(1 - (row.age / 4e9), rock_age_decay)
-
-        if age_multiplier < 0:
-            age_multiplier = 0
-
-        outer *= age_multiplier
-        inner *= age_multiplier
-
         # print(pmap.shape)
         # print(outer.shape)
         row_center, col_center = rowcol(transform, row.x, row.y)
@@ -131,6 +120,17 @@ def craters_probability_map(
         # print(window_inter.toslices())
         crater_inter = intersection_relative_to(crater_window, window)
         # print(f"crater_inter {crater_inter}")
+
+        # Need to determine scheme for reducing the outer and inner maps relative
+        # to their age, but original code was actually based on d/D and otherwise
+        # backwards (more degraded craters had larger probability multipliers.
+        age_multiplier = np.power(1 - (row.age / 4e9), rock_age_decay)
+
+        if age_multiplier < 0:
+            age_multiplier = 0
+
+        outer *= age_multiplier
+        inner *= age_multiplier
 
         # Ejecta field adds to probability:
         pmap[window_inter.toslices()] = (
