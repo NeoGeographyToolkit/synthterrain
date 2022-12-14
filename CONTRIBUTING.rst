@@ -74,6 +74,7 @@ Ready to contribute? Here's how to set up `synthterrain` for local development.
     $ conda activate synthterrain
     $ mamba env update --file environment_dev.yml
     $ mamba env update --file environment.yml
+    $ pip install opensimplex
     $ pip install --no-deps -e .
 
    The last `pip install` installs synthterrain in "editable" mode which facilitates using the programs and testing.

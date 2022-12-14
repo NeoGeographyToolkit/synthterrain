@@ -21,7 +21,23 @@ for certain functionality.
 Features
 --------
 
-* TODO
+The synthterrain package currently offers these command-line programs
+when it is installed (see the CONTRIBUTING document).  Arguments
+can be found by running any program with a ``-h`` flag.
+
+``synthcraters``
+    This program generates synthetic crater populations.
+
+``synthrocks``
+    This program generates synthetic rock populations (generally run after
+    ``synthcraters`` so that rocks can be placed relative to crater ejecta
+    fields.
+
+``craterconvert``
+    Converts between the current crater CSV and old XML MATLAB formats.
+
+``craterplot``
+    Generates a set of plots from the CSV output of `synthcraters`.
 
 Contributing
 ------------
