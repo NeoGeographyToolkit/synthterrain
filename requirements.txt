@@ -1,5 +1,6 @@
 matplotlib
 numpy
+opensimplex
 pandas
 rasterio
 scipy
