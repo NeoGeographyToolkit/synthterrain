@@ -13,6 +13,7 @@ setup(
         'console_scripts': [
             'synthcraters=synthterrain.crater.cli:main',
             'synthrocks=synthterrain.rock.cli:main',
+            'synthterrain=synthterrain.cli:main',
             'craterplot=synthterrain.crater.cli_plot:main',
             'craterconvert=synthterrain.crater.cli_convert:main',
         ],

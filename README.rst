@@ -28,11 +28,40 @@ can be found by running any program with a ``-h`` flag.
     ``synthcraters`` so that rocks can be placed relative to crater ejecta
     fields.
 
+``synthterrain``
+    This program mostly just runs ``synthcraters`` and then immediately runs
+    ``synthrocks``.  Also allows a set of pre-existing craters to be added
+    to the probabiliy maps that ``synthrocks`` uses to place rocks.
+
 ``craterconvert``
     Converts between the current crater CSV and old XML MATLAB formats.
 
 ``craterplot``
     Generates a set of plots from the CSV output of ``synthcraters``.
+
+
+The command lines for these programs can get long, and if you would prefer to
+write a text file pre-loaded with the arguments, you can do so with ampersand-arguments.
+
+For example, you could write a text file ``test1.txt`` that looks like this::
+
+    # This is an arguments file, lines that start with octothorpes are ignored.
+    -v
+    --craters craters_5m_to_500m.csv
+    --cr_maxd 5
+    --cr_mind 0.5
+    --rk_maxd 2
+    --rk_mind 0.1
+    --probability_map_gsd
+    --cr_outfile test_cr.csv
+    --rk_outfile test_rk.csv
+
+And then you could call ``synthterrain`` like this::
+
+    $> synthterrain @test1.txt
+
+You can mix regular arguments and ampersand-arguments if you wish.
+
 
 Contributing
 ------------
