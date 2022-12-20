@@ -12,5 +12,6 @@ dependencies:
   - matplotlib
   - numpy
   - pandas
+  - rasterio
   - scipy
   - shapely

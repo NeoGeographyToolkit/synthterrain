@@ -249,9 +249,10 @@ def to_file(df: pd.DataFrame, outfile: Path, xml=False):
 
     return
 
+
 def from_file(infile: Path):
     """Load previously written crater information from disk"""
-    if infile.endswith('xml'):
+    if infile.suffix == "xml":
         df = pd.read_xml(infile)
     else:
         df = pd.read_csv(infile)
