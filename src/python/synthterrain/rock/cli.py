@@ -46,13 +46,13 @@ def arg_parser():
         "--maxd",
         default=2,
         type=float,
-        help="Maximum crater diameter in meters. Default: %(default)s",
+        help="Maximum rock diameter in meters. Default: %(default)s",
     )
     parser.add_argument(
         "--mind",
         default=0.1,
         type=float,
-        help="Minimum crater diameter in meters. Default: %(default)s",
+        help="Minimum rock diameter in meters. Default: %(default)s",
     )
     parser.add_argument(
         "-p",
