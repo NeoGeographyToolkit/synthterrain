@@ -204,11 +204,17 @@ class VIPER_Env_Spec(Crater_rv_continuous):
         """
         if isinstance(d, Number):
             # Convert to numpy array, if needed.
-            d = np.array([d, ])
-        c = np.empty_like(d, dtype=np.dtype(float))
-        c[d <= 80] = 29174 * np.float_power(d[d <= 80], -1.92)
-        c[d > 80] = 156228 * np.float_power(d[d > 80], -2.389)
-        return c / (1000 * 1000)
+            diam = np.array([d, ])
+        else:
+            diam = d
+        c = np.empty_like(diam, dtype=np.dtype(float))
+        c[diam <= 80] = 29174 * np.float_power(diam[diam <= 80], -1.92)
+        c[diam > 80] = 156228 * np.float_power(diam[diam > 80], -2.389)
+        out = c / (1000 * 1000)
+        if isinstance(d, Number):
+            return out.item()
+        else:
+            return out
 
     # See comment on commented out parent isfd() function.
     # def isfd(self, d):
@@ -783,7 +789,7 @@ class GNPF_old(NPF):
             )
 
         if isinstance(d, Number):
-            return c[0]
+            return c.item()
         else:
             return c
 
@@ -799,12 +805,14 @@ class GNPF_old(NPF):
     def _cdf(self, d):
         if isinstance(d, Number):
             # Convert to numpy array, if needed.
-            d = np.array([d, ])
-        c = np.empty_like(d, dtype=np.dtype(float))
+            diam = np.array([d, ])
+        else:
+            diam = d
+        c = np.empty_like(diam, dtype=np.dtype(float))
 
-        c[d >= 10] = super()._cdf(d[d >= 10])
+        c[diam >= 10] = super()._cdf(diam[diam >= 10])
         if self.interp == "extendGrun":
-            c[d < 10] = self.grun._cdf(d[d < 10])
+            c[diam < 10] = self.grun._cdf(diam[diam < 10])
         elif self.interp == "linear":
             d_interp = np.log10((self.grunstop, 10))
             c_interp = np.log10((
@@ -813,7 +821,7 @@ class GNPF_old(NPF):
             # cs = CubicSpline(d_interp, c_interp)
             f = interp1d(d_interp, c_interp)
 
-            overlap = np.logical_and(d > self.grunstop, d < 10)
+            overlap = np.logical_and(diam > self.grunstop, diam < 10)
             # c[overlap] = np.power(10, np.interp(
             #     np.log10(d[overlap]),
             #     [np.log10(self.grunstop), np.log10(10)],
@@ -822,9 +830,13 @@ class GNPF_old(NPF):
             #         np.log10(super()._cdf(10))
             #     ]
             # ))
-            c[overlap] = np.float_power(10, f(np.log10(d[overlap])))
-            c[d <= self.grunstop] = self.grun._cdf(d[d <= self.grunstop])
-        return c
+            c[overlap] = np.float_power(10, f(np.log10(diam[overlap])))
+            c[diam <= self.grunstop] = self.grun._cdf(diam[diam <= self.grunstop])
+
+        if isinstance(d, Number):
+            return c.item()
+        else:
+            return c
 
 
 class GNPF(NPF):
@@ -880,19 +892,25 @@ class GNPF(NPF):
         c[diam < 10] = self.grun.csfd(diam[diam < 10])
 
         if isinstance(d, Number):
-            return c[0]
+            return c.item()
         else:
             return c
 
     def _cdf(self, d):
         if isinstance(d, Number):
             # Convert to numpy array, if needed.
-            d = np.array([d, ])
-        c = np.empty_like(d, dtype=np.dtype(float))
+            diam = np.array([d, ])
+        else:
+            diam = d
+        c = np.empty_like(diam, dtype=np.dtype(float))
 
-        c[d >= 10] = super()._cdf(d[d >= 10])
-        c[d < 10] = self.grun._cdf(d[d < 10])
-        return c
+        c[diam >= 10] = super()._cdf(diam[diam >= 10])
+        c[diam < 10] = self.grun._cdf(diam[diam < 10])
+
+        if isinstance(d, Number):
+            return c.item()
+        else:
+            return c
 
 
 class GNPF_fit(Coef_Distribution):
