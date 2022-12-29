@@ -4,11 +4,9 @@
 crater size-frequency distributions as probability distributions.
 """
 
-# Copyright 2022, synthterrain developers.
-#
-# Reuse is permitted under the terms of the license.
-# The AUTHORS file and the LICENSE file are at the
-# top level of this library.
+# Copyright 2022, United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All rights reserved.
 
 from abc import ABC, abstractmethod
 import copy
@@ -126,7 +124,7 @@ class Crater_rv_continuous(ABC, rv_continuous):
            classes are strongly encouraged to override this with more
            efficient implementations, also possibly implementing _ppf().
         """
-        return np.ones_like(d) - (self.csfd(d) / self.csfd(self.a))
+        return np.ones_like(d, dtype=np.dtype(float)) - (self.csfd(d) / self.csfd(self.a))
 
     def count(self, area, diameter=None) -> int:
         """Returns the number of craters based on the *area* provided
@@ -182,7 +180,7 @@ class Test_Distribution(Crater_rv_continuous):
         """Override of parent function to eliminate unnecessary division
            of 29174 by itself.
         """
-        return np.ones_like(d) - (
+        return np.ones_like(d, dtype=np.dtype(float)) - (
             np.float_power(d, -1.92) / np.float_power(self.a, -1.92)
         )
 
@@ -207,7 +205,7 @@ class VIPER_Env_Spec(Crater_rv_continuous):
         if isinstance(d, Number):
             # Convert to numpy array, if needed.
             d = np.array([d, ])
-        c = np.empty_like(d)
+        c = np.empty_like(d, dtype=np.dtype(float))
         c[d <= 80] = 29174 * np.float_power(d[d <= 80], -1.92)
         c[d > 80] = 156228 * np.float_power(d[d > 80], -2.389)
         return c / (1000 * 1000)
@@ -229,16 +227,16 @@ class VIPER_Env_Spec(Crater_rv_continuous):
         """Override parent function to eliminate unnecessary division
            by constants.
         """
-        c = np.empty_like(d)
+        c = np.empty_like(d, dtype=np.dtype(float))
         c[d <= 80] = np.float_power(d[d <= 80], -1.92) / np.float_power(self.a, -1.92)
         c[d > 80] = np.float_power(d[d > 80], -2.389) / np.float_power(self.a, -2.389)
-        return np.ones_like(d) - c
+        return np.ones_like(d, dtype=np.dtype(float)) - c
 
     def _ppf(self, q):
         """Override parent function to make things faster for .rvs()."""
         q80 = float(self._cdf(np.array([80, ])))
-        ones = np.ones_like(q)
-        p = np.empty_like(q)
+        ones = np.ones_like(q, dtype=np.dtype(float))
+        p = np.empty_like(q, dtype=np.dtype(float))
         p[q <= q80] = np.float_power(
             (ones[q <= q80] / (ones[q <= q80] - q[q <= q80])),
             (1 / 1.92)
@@ -425,7 +423,7 @@ class Coef_Distribution(Crater_rv_continuous):
 
     def _cdf(self, d):
         """Override parent function to speed up."""
-        return np.ones_like(d) - np.float_power(
+        return np.ones_like(d, dtype=np.dtype(float)) - np.float_power(
             10,
             self.poly(np.log10(d / 1000)) - self.poly(np.log10(self.a / 1000))
         )
@@ -506,7 +504,7 @@ class Interp_Distribution(Crater_rv_continuous):
 
     def _cdf(self, d):
         """Override parent function to speed up."""
-        return np.ones_like(d) - np.float_power(
+        return np.ones_like(d, dtype=np.dtype(float)) - np.float_power(
             10,
             self.func(np.log10(d)) - self.func(np.log10(self.a))
         )
@@ -753,7 +751,7 @@ class GNPF_old(NPF):
             diam = np.array([float(d), ])
         else:
             diam = d
-        c = np.empty_like(diam)
+        c = np.empty_like(diam, dtype=np.dtype(float))
 
         c[diam >= 10] = super().csfd(diam[diam >= 10])
 
@@ -802,7 +800,7 @@ class GNPF_old(NPF):
         if isinstance(d, Number):
             # Convert to numpy array, if needed.
             d = np.array([d, ])
-        c = np.empty_like(d)
+        c = np.empty_like(d, dtype=np.dtype(float))
 
         c[d >= 10] = super()._cdf(d[d >= 10])
         if self.interp == "extendGrun":
@@ -876,7 +874,7 @@ class GNPF(NPF):
             diam = np.array([float(d), ])
         else:
             diam = d
-        c = np.empty_like(diam)
+        c = np.empty_like(diam, dtype=np.dtype(float))
 
         c[diam >= 10] = super().csfd(diam[diam >= 10])
         c[diam < 10] = self.grun.csfd(diam[diam < 10])
@@ -890,7 +888,7 @@ class GNPF(NPF):
         if isinstance(d, Number):
             # Convert to numpy array, if needed.
             d = np.array([d, ])
-        c = np.empty_like(d)
+        c = np.empty_like(d, dtype=np.dtype(float))
 
         c[d >= 10] = super()._cdf(d[d >= 10])
         c[d < 10] = self.grun._cdf(d[d < 10])
