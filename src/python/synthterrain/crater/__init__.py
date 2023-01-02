@@ -3,7 +3,7 @@
 """Generates synthetic crater populations.
 """
 
-# Copyright 2022, synthterrain developers.
+# Copyright 2022-2023, synthterrain developers.
 #
 # Reuse is permitted under the terms of the license.
 # The AUTHORS file and the LICENSE file are at the
@@ -23,7 +23,7 @@ import pandas as pd
 from shapely.geometry import Point, Polygon
 
 from synthterrain.crater import functions
-from synthterrain.crater.age import equilibrium_ages
+from synthterrain.crater.age import equilibrium_age
 from synthterrain.crater.diffusion import diffuse_d_over_D, diffuse_d_over_D_by_bin
 
 
@@ -147,7 +147,7 @@ def generate_ages(diameters, pd_csfd, eq_csfd):
     cratering in craters per square meter per Gigayear at that
     diameter (pd_csfd).
     """
-    yrs_to_equilibrium = equilibrium_ages(diameters, pd_csfd, eq_csfd)
+    yrs_to_equilibrium = equilibrium_age(diameters, pd_csfd, eq_csfd)
     # print(yrs_to_equilibrium)
 
     ages = np.random.default_rng().uniform(0, yrs_to_equilibrium)

@@ -4,11 +4,9 @@
 Functions for estimating crater ages.
 """
 
-# Copyright 2022, synthterrain developers.
-#
-# Reuse is permitted under the terms of the license.
-# The AUTHORS file and the LICENSE file are at the
-# top level of this library.
+# Copyright 2022-2023, United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All rights reserved.
 
 import bisect
 import logging
@@ -23,7 +21,7 @@ from synthterrain.crater.profile import stopar_fresh_dd
 logger = logging.getLogger(__name__)
 
 
-def equilibrium_ages(diameters, pd_csfd, eq_csfd):
+def equilibrium_age(diameters, pd_csfd, eq_csfd):
     """
     Returns a numpy array which contains the equilibrium ages
     which correspond to the craters provided via *diameters*
@@ -97,7 +95,6 @@ def estimate_age_by_bin(
     bin_edges = np.geomspace(
         df["diameter"].min(), df["diameter"].max(), num=num + 1
     )
-    print(bin_edges)
     # logger.info(f"{df.shape[0]} craters")
     logger.info(
         f"Divided the craters into {num} diameter bins (not all bins may have "
@@ -119,7 +116,7 @@ def estimate_age_by_bin(
 
         fresh_dd = stopar_fresh_dd(interval.mid)
 
-        eq_age = equilibrium_ages(interval.mid, pd_csfd, eq_csfd).item()
+        eq_age = equilibrium_age(interval.mid, pd_csfd, eq_csfd)
 
         dd_rev_list = list(reversed(diffuse_d_over_D(
             interval.mid,
