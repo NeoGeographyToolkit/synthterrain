@@ -129,7 +129,7 @@ def estimate_age_by_bin(
 
         def guess_age(dd):
             age_step = bisect.bisect_left(dd_rev_list, dd)
-            return (nsteps - age_step) * years_per_step
+            return int((nsteps - age_step) * years_per_step)
 
         df.loc[df["diameter_bin"] == interval, "age"] = df.loc[
             df["diameter_bin"] == interval
