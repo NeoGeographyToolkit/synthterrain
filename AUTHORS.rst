@@ -10,4 +10,6 @@ Development Lead
 Contributors
 ------------
 
-None yet. Why not be the first?
+* Mark Allan, NASA Ames & KBR
+* Audrow Nash, NASA Ames & KBR
+* Jennifer Nguyen, NASA Ames & KBR

@@ -3,7 +3,7 @@
 """Generates synthetic crater populations.
 """
 
-# Copyright 2022, synthterrain developers.
+# Copyright 2022-2023, synthterrain developers.
 #
 # Reuse is permitted under the terms of the license.
 # The AUTHORS file and the LICENSE file are at the
@@ -23,6 +23,7 @@ import pandas as pd
 from shapely.geometry import Point, Polygon
 
 from synthterrain.crater import functions
+from synthterrain.crater.age import equilibrium_age
 from synthterrain.crater.diffusion import diffuse_d_over_D, diffuse_d_over_D_by_bin
 
 
@@ -146,14 +147,7 @@ def generate_ages(diameters, pd_csfd, eq_csfd):
     cratering in craters per square meter per Gigayear at that
     diameter (pd_csfd).
     """
-    # eqf = functions.Trask(a=min(diameters))
-    # pdf = functions.GNPF(a=min(diameters))
-
-    upper_diameters = np.float_power(10, np.log10(diameters) + 0.1)
-    eq = eq_csfd(diameters) - eq_csfd(upper_diameters)
-    pf = pd_csfd(diameters) - pd_csfd(upper_diameters)
-
-    yrs_to_equilibrium = 1e9 * eq / pf
+    yrs_to_equilibrium = equilibrium_age(diameters, pd_csfd, eq_csfd)
     # print(yrs_to_equilibrium)
 
     ages = np.random.default_rng().uniform(0, yrs_to_equilibrium)
@@ -163,7 +157,7 @@ def generate_ages(diameters, pd_csfd, eq_csfd):
 
 def plot(df):
     """
-    Generates a plto display with a variety of subplots for the provided
+    Generates a plot display with a variety of subplots for the provided
     pandas DataFrame, consistent with the columns in the DataFrame output
     by synthesize().
     """

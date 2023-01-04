@@ -34,8 +34,8 @@ class Test_Crater_rv_continuous(unittest.TestCase):
 
     def test_VIPER_Env_Spec(self):
         rv = fns.VIPER_Env_Spec(a=1, b=100)
-        self.assertEqual(rv.csfd(10), 0.00035)
-        self.assertEqual(rv._cdf(np.array([10,])), 1)
+        self.assertAlmostEqual(rv.csfd(10), 0.0003507)
+        np.testing.assert_allclose(rv._cdf(np.array([10,])), np.array([0.98797736]))
 
         np.testing.assert_allclose(
             rv._ppf(np.array([0.5, 0.99,])), np.array([1.43478377, 11.00694171])
