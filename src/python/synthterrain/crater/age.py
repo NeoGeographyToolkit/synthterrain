@@ -91,6 +91,9 @@ def estimate_age_by_bin(
     is compared to the d/D ratios from the diffusion run, and an estimated age
     is assigned.
     """
+    if df.empty:
+        raise ValueError("The provided dataframe has no rows.")
+
     logger.info("estimate_age_by_bin start.")
     bin_edges = np.geomspace(
         df["diameter"].min(), df["diameter"].max(), num=num + 1
