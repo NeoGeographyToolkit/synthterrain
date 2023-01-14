@@ -76,7 +76,12 @@ def arg_parser():
         "in XML output that conforms to the old MATLAB code.",
     )
     parser.add_argument(
-        "-o", "--outfile", default=None, type=Path, help="Path to output file."
+        "-o",
+        "--outfile",
+        required=True,
+        default=None,
+        type=Path,
+        help="Path to output file.",
     )
 
     return parser

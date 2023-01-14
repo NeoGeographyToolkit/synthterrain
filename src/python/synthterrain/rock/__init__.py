@@ -199,7 +199,7 @@ def place_rocks(
     position_idxs = rng.choice(
         len(flat_prob_map),
         size=len(diameters),
-        replace=False,
+        replace=True,
         p=flat_prob_map,
     )
 

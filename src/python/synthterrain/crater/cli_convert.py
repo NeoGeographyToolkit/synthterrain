@@ -81,12 +81,18 @@ def main():
         b = df["diameter"].max()
         pd_func = crater_func.GNPF(a=a, b=b)
         eq_func = crater_func.VIPER_Env_Spec(a=a, b=b)
-        if "age" in df.columns:
-            df[df["age"] == 0] = estimate_age_by_bin(
-                df[df["age"] == 0], pd_func.csfd, eq_func.csfd, num=50
+        try:
+            if "age" in df.columns:
+                df[df["age"] == 0] = estimate_age_by_bin(
+                    df[df["age"] == 0], pd_func.csfd, eq_func.csfd, num=50
+                )
+            else:
+                df = estimate_age_by_bin(df, pd_func.csfd, eq_func.csfd, num=50)
+        except ValueError:
+            logger.error(
+                "The provided file has no craters with an age of zero."
             )
-        else:
-            df = estimate_age_by_bin(df, pd_func.csfd, eq_func.csfd, num=50)
+            return 1
 
     crater.to_file(df, args.outfile, xml=(args.outfile.suffix.casefold() == ".xml"))
 
