@@ -41,6 +41,15 @@ def arg_parser():
              "to the diameter, indicating a very fresh crater."
     )
     parser.add_argument(
+        "--full_age",
+        action="store_true",
+        help="Ignored unless --estimate_ages is also given.  When provided, it will "
+             "cause the diffusion calculation to run for the age of the solar system "
+             "instead of just the equilibrium age for each crater size.  This may "
+             "provide improved age estimates, but could also cause longer run times. "
+             "Please use with caution."
+    )
+    parser.add_argument(
         "infile",
         type=Path,
         help="A CSV or XML file produced by synthcraters."
@@ -77,17 +86,22 @@ def main():
         )
 
     if args.estimate_ages:
-        a = df["diameter"].min()
-        b = df["diameter"].max()
-        pd_func = crater_func.GNPF(a=a, b=b)
-        eq_func = crater_func.VIPER_Env_Spec(a=a, b=b)
+        if args.full_age:
+            pd_csfd = None
+            eq_csfd = None
+        else:
+            a = df["diameter"].min()
+            b = df["diameter"].max()
+            pd_csfd = crater.determine_production_function(a=a, b=b).csfd
+            eq_csfd = crater_func.VIPER_Env_Spec(a=a, b=b).csfd
+
         try:
             if "age" in df.columns:
                 df[df["age"] == 0] = estimate_age_by_bin(
-                    df[df["age"] == 0], pd_func.csfd, eq_func.csfd, num=50
+                    df[df["age"] == 0], 50, pd_csfd, eq_csfd
                 )
             else:
-                df = estimate_age_by_bin(df, pd_func.csfd, eq_func.csfd, num=50)
+                df = estimate_age_by_bin(df, 50, pd_csfd, eq_csfd)
         except ValueError:
             logger.error(
                 "The provided file has no craters with an age of zero."

@@ -70,9 +70,9 @@ def estimate_age(diameter, dd, max_age):
 
 def estimate_age_by_bin(
     df,
-    pd_csfd,
-    eq_csfd,
     num=50,
+    pd_csfd=None,
+    eq_csfd=None,
 ) -> pd.DataFrame:
     """
     Returns a pandas DataFrame identical to the input *df* but with the
@@ -85,25 +85,38 @@ def estimate_age_by_bin(
     scale boundaries (using the numpy geomspace() function) between the maximum
     and minimum diameter values.
 
-    Then, the center diameter of each bin has its equilibrium age determined via
-    equilibrium_ages() and diffuse_d_over_D() is run to evaluate the d/D ratio
-    of that crater over its lifetime.  Then, for each crater in the bin, its d/D
-    is compared to the d/D ratios from the diffusion run, and an estimated age
-    is assigned.
+    Then, the center diameter of each bin has diffuse_d_over_D()
+    run to evaluate the d/D ratio of that crater over the lifetime
+    of the solar system (if *pd_csfd* and *eq_csfd* are both None), or
+    the diffusion calculation is run for the appropriate equilibrium age
+    of each crater diameter.
+
+    Then, for each crater in the bin, its d/D is compared to the d/D ratios from the
+    diffusion run, and an estimated age is assigned.
     """
     if df.empty:
         raise ValueError("The provided dataframe has no rows.")
 
     logger.info("estimate_age_by_bin start.")
-    bin_edges = np.geomspace(
-        df["diameter"].min(), df["diameter"].max(), num=num + 1
+    if df["diameter"].min() == df["diameter"].max():
+        bin_edges = 1
+        total_bins = 1
+        logger.info("The craters are all the same size.")
+    else:
+        bin_edges = np.geomspace(
+            df["diameter"].min(), df["diameter"].max(), num=num + 1
+        )
+        total_bins = num
+        # logger.info(f"{df.shape[0]} craters")
+        logger.info(
+            f"Divided the craters into {num} diameter bins (not all bins may have "
+            "craters)"
+        )
+
+    df["diameter_bin"] = pd.cut(
+        df["diameter"], bins=bin_edges, include_lowest=True,
     )
-    # logger.info(f"{df.shape[0]} craters")
-    logger.info(
-        f"Divided the craters into {num} diameter bins (not all bins may have "
-        "craters)"
-    )
-    df["diameter_bin"] = pd.cut(df["diameter"], bins=bin_edges, include_lowest=True)
+
     # df["equilibrium_age"] = equilibrium_ages(df["diameter"], pd_csfd, eq_csfd)
     df["age"] = 0
 
@@ -111,7 +124,7 @@ def estimate_age_by_bin(
             df["diameter_bin"].value_counts(sort=False).items()
     ):
         logger.info(
-            f"Processing bin {i}/{num}, interval: {interval}, count: {count}"
+            f"Processing bin {i + 1}/{total_bins}, interval: {interval}, count: {count}"
         )
 
         if count == 0:
@@ -119,16 +132,19 @@ def estimate_age_by_bin(
 
         fresh_dd = stopar_fresh_dd(interval.mid)
 
-        eq_age = equilibrium_age(interval.mid, pd_csfd, eq_csfd)
+        if pd_csfd is not None and eq_csfd is not None:
+            age = equilibrium_age(interval.mid, pd_csfd, eq_csfd)
+        else:
+            age = 4.5e9
 
         dd_rev_list = list(reversed(diffuse_d_over_D(
             interval.mid,
-            eq_age,
+            age,
             start_dd_adjust=fresh_dd,
             return_steps=True
         )))
         nsteps = len(dd_rev_list)
-        years_per_step = eq_age / nsteps
+        years_per_step = age / nsteps
 
         def guess_age(dd):
             age_step = bisect.bisect_left(dd_rev_list, dd)
