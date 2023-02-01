@@ -42,12 +42,7 @@ def synthesize(
        synthesized from the input parameters.
     """
     if production_fn is None:
-        if crater_dist.a >= 10:
-            production_fn = functions.NPF(a=crater_dist.a, b=crater_dist.b)
-        elif crater_dist.b <= 2.76:
-            production_fn = functions.Grun(a=crater_dist.a, b=crater_dist.b)
-        else:
-            production_fn = functions.GNPF(a=crater_dist.a, b=crater_dist.b)
+        production_fn = determine_production_function(crater_dist.a, crater_dist.b)
     logger.info(f"Production function is {production_fn.__class__}")
 
     # Get craters
@@ -88,6 +83,15 @@ def synthesize(
     df["y"] = ylist
 
     return df
+
+
+def determine_production_function(a: float, b: float):
+    if a >= 10:
+        return functions.NPF(a, b)
+    elif b <= 2.76:
+        return functions.Grun(a, b)
+    else:
+        return functions.GNPF(a, b)
 
 
 def random_points(poly: Polygon, num_points: int):
