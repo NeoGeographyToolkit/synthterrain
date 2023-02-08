@@ -50,9 +50,9 @@ class Test_Ages(unittest.TestCase):
         )
         df_out = age.estimate_age_by_bin(
             df,
+            50,  # the bin size can have a real impact here.
             pd_func.csfd,
             eq_func.csfd,
-            num=50,  # the bin size can have a real impact here.
         )
 
         age_series = pd.Series([
@@ -61,3 +61,18 @@ class Test_Ages(unittest.TestCase):
             8072614], name="age")
 
         pd.testing.assert_series_equal(age_series, df_out["age"])
+
+
+        df2 = pd.DataFrame(data={
+            'diameter': [100., 100., 100., 100.],
+            'd/D': [0.01, 0.06, 0.10, 0.17]
+        })
+
+        df2_out = age.estimate_age_by_bin(
+            df2,
+            50,  # With only one diameter, num is irrelevant
+        )
+
+        age2_series = pd.Series([4500000000, 4500000000, 1388888888, 0], name="age")
+
+        pd.testing.assert_series_equal(age2_series, df2_out["age"])
