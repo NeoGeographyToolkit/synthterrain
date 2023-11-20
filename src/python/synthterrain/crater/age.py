@@ -47,6 +47,9 @@ def estimate_age(diameter, dd, max_age):
     d/D value by attempting to match the given d/D value to the diffusion shape
     of a crater of the given *diameter* and the *max_age* of that crater, which
     could be estimated via the equilibrium_ages() function.
+
+    This function returns estimated ages in multiples of a million years.  More
+    precision than that is not accurate for this approach.
     """
     fresh_dd = stopar_fresh_dd(diameter)
 
@@ -65,7 +68,9 @@ def estimate_age(diameter, dd, max_age):
 
     years_per_step = max_age / nsteps
 
-    return (nsteps - age_step) * years_per_step
+    age = (nsteps - age_step) * years_per_step
+
+    return round(age / 1e6) * 1e6
 
 
 def estimate_age_by_bin(
@@ -148,7 +153,7 @@ def estimate_age_by_bin(
 
         def guess_age(dd):
             age_step = bisect.bisect_left(dd_rev_list, dd)
-            return int((nsteps - age_step) * years_per_step)
+            return round(int((nsteps - age_step) * years_per_step) / 1e6) * 1e6
 
         df.loc[df["diameter_bin"] == interval, "age"] = df.loc[
             df["diameter_bin"] == interval
@@ -156,6 +161,8 @@ def estimate_age_by_bin(
             lambda row: guess_age(row["d/D"]),
             axis=1
         )
+
+    df["age"] = df["age"].astype("int64")
 
     logger.info("estimate_age_by_bin complete.")
 

@@ -32,7 +32,7 @@ class Test_Ages(unittest.TestCase):
 
     def test_estimate_age(self):
         a = age.estimate_age(10, 0.09, 5e7)
-        self.assertAlmostEqual(a, 25322581, places=0)
+        self.assertAlmostEqual(a, 25000000, places=0)
 
     def test_estimate_age_by_bin(self):
         pd_func = fns.GNPF(a=1, b=1000)
@@ -56,12 +56,11 @@ class Test_Ages(unittest.TestCase):
         )
 
         age_series = pd.Series([
-            1511054, 3538, 5768173, 12861, 12054097, 26876, 25171337, 56123, 35854662,
-            0, 63160550, 294454, 137994962, 12513397, 424194730, 68788334, 702317463,
-            8072614], name="age")
+            2000000, 0, 6000000, 0, 12000000, 0, 25000000, 0, 36000000, 0, 63000000, 0,
+            138000000, 12000000, 424000000, 68000000, 702000000, 8000000
+        ], name="age")
 
         pd.testing.assert_series_equal(age_series, df_out["age"])
-
 
         df2 = pd.DataFrame(data={
             'diameter': [100., 100., 100., 100.],
@@ -73,6 +72,6 @@ class Test_Ages(unittest.TestCase):
             50,  # With only one diameter, num is irrelevant
         )
 
-        age2_series = pd.Series([4500000000, 4500000000, 1388888888, 0], name="age")
+        age2_series = pd.Series([4500000000, 4500000000, 1388000000, 0], name="age")
 
         pd.testing.assert_series_equal(age2_series, df2_out["age"])
