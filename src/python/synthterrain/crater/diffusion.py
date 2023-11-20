@@ -19,10 +19,15 @@ https://scipython.com/book2/chapter-7-matplotlib/examples/the-two-dimensional-di
 import logging
 import math
 import statistics
+from typing import Union
 
 import numpy as np
+import numpy.typing as npt
 from numpy.polynomial import Polynomial
 import pandas as pd
+from rasterio.transform import rowcol
+from rasterio.windows import Window, get_data_window, intersect
+from skimage.transform import rescale
 
 from synthterrain.crater.profile import FTmod_Crater, stopar_fresh_dd
 
@@ -100,7 +105,7 @@ def diffuse_d_over_D(
     start_dd_mean=0.15,
     start_dd_std=0.02,
     return_steps=False,
-    return_surface=False,
+    return_surface: Union[bool, str] = False,
     crater_cls=FTmod_Crater
 ):
     """
@@ -132,7 +137,8 @@ def diffuse_d_over_D(
     will be returned, where the nature of the zeroth element is based on
     *return_steps* and the final element is the numpy array of elevations
     which represents the final diffused surface relative to a starting flat
-    surface of zero.
+    surface of zero.  If "all" is given for *return_surface*, the final tuple
+    element will be a list of numpy arrays, one for each time step.
 
     If a different crater profile is desired, pass a subclass (not an instance)
     of crater.profile.Crater to *crater_cls* that takes a depth parameter,
@@ -196,7 +202,8 @@ def diffuse_d_over_D(
     # D * dt appears in the Hill (2020) diffusion calculation, but
     # we have formulated dls, such that D * dt = dls
 
-    dd_for_each_step = list()
+    dd_for_each_step = [(np.max(u) - np.min(u)) / diameter, ]
+    u_for_each_step = [u, ]
     un = np.copy(u)
     for step in range(nsteps):
         un[1:-1, 1:-1] = u[1:-1, 1:-1] + dls * (
@@ -206,8 +213,9 @@ def diffuse_d_over_D(
                 u[1:-1, 2:] - 2 * u[1:-1, 1:-1] + u[1:-1, :-2]
             ) / dx2
         )
-        dd_for_each_step.append((np.max(u) - np.min(u)) / diameter)
+        dd_for_each_step.append((np.max(un) - np.min(un)) / diameter)
         u = np.copy(un)
+        u_for_each_step.append(u)
 
     # Final depth to diameter:
     if return_steps:
@@ -215,8 +223,10 @@ def diffuse_d_over_D(
     else:
         dd = dd_for_each_step[-1]
 
-    if return_surface:
-        return dd, u
+    if return_surface == "all":
+        return dd, u_for_each_step
+    elif return_surface:
+        return dd, u_for_each_step[-1]
     else:
         return dd
 
@@ -227,6 +237,7 @@ def diffuse_d_over_D_by_bin(
     domain_size=200,
     start_dd_mean=0.15,
     start_dd_std=0.02,
+    return_surfaces=False,
 ) -> pd.DataFrame:
     """
     Returns a pandas DataFrame identical to the input *df* but with the
@@ -255,6 +266,10 @@ def diffuse_d_over_D_by_bin(
     by the "mean" d/D ratio curve, and a standard deviation specified by the
     mean of the difference of the "high" and "low" diffiusion model values with
     the "mean" d/D model value at that time step.
+
+    If *return_surfaces* is True, there will be an additional column, "surface", in the
+    returned dataframe that contains a 2D numpy array which represents the height field
+    of the crater in each row.
     """
     logger.info("diffuse_d_over_D_by_bin start.")
 
@@ -314,8 +329,10 @@ def diffuse_d_over_D_by_bin(
         def start_std(diameter):
             return start_dd_std
 
-    df["diameter_bin"] = pd.cut(df["diameter"], bins=bin_edges)
+    df["diameter_bin"] = pd.cut(df["diameter"], bins=bin_edges, include_lowest=True)
     df["d/D"] = 0.0
+    df["surface"] = None
+    df["surface"].astype(object)
 
     # Need to convert this loop to multiprocessing.
     for i, (interval, count) in enumerate(
@@ -329,70 +346,197 @@ def diffuse_d_over_D_by_bin(
             continue
         elif 0 < count <= 3:
             # Run individual models for each crater.
-            df.loc[df["diameter_bin"] == interval, "d/D"] = df.loc[
-                df["diameter_bin"] == interval
-            ].apply(
-                lambda row: diffuse_d_over_D(
-                    row["diameter"],
-                    row["age"],
-                    domain_size=domain_size,
-                    start_dd_adjust=True,
-                    start_dd_mean=start_dd(row["diameter"]),
-                    start_dd_std=start_dd(row["diameter"]),
-                ),
-                axis=1
-            )
+            if return_surfaces:
+                df.loc[df["diameter_bin"] == interval, ["d/D", "surface"]] = df.loc[
+                    df["diameter_bin"] == interval
+                ].apply(
+                    lambda row: pd.Series(
+                        diffuse_d_over_D(
+                            row["diameter"],
+                            row["age"],
+                            domain_size=domain_size,
+                            start_dd_adjust=True,
+                            start_dd_mean=start_dd(row["diameter"]),
+                            start_dd_std=start_std(row["diameter"]),
+                            return_surface=True,
+                        ),
+                        index=["d/D", "surface"]
+                    ),
+                    axis=1,
+                    result_type="expand",
+                )
+            else:
+                df.loc[df["diameter_bin"] == interval, "d/D"] = df.loc[
+                    df["diameter_bin"] == interval
+                ].apply(
+                    lambda row: diffuse_d_over_D(
+                        row["diameter"],
+                        row["age"],
+                        domain_size=domain_size,
+                        start_dd_adjust=True,
+                        start_dd_mean=start_dd(row["diameter"]),
+                        start_dd_std=start_std(row["diameter"]),
+                    ),
+                    axis=1,
+                )
         else:
             # Run three representative models for this "bin"
             oldest_age = df.loc[df["diameter_bin"] == interval, "age"].max()
 
-            start = start_dd(interval.mid)
-            std = start_std(interval.mid)
-
-            middle_dds = diffuse_d_over_D(
-                interval.mid,
-                oldest_age,
-                domain_size=domain_size,
-                start_dd_adjust=start,
-                return_steps=True
-            )
-            high_dds = diffuse_d_over_D(
-                interval.mid,
-                oldest_age,
-                domain_size=domain_size,
-                start_dd_adjust=start + std,
-                return_steps=True
-            )
-            low_dds = diffuse_d_over_D(
-                interval.mid,
-                oldest_age,
-                domain_size=domain_size,
-                start_dd_adjust=start - std,
-                return_steps=True
-            )
-
             kappa = kappa_diffusivity(interval.mid)
             dls = diffusion_length_scale(interval.mid, domain_size)
 
-            # Defining this in-place since it really isn't needed outside
-            # this function.
-            def dd_from_rep(age):
-                age_step = math.floor(age * kappa / dls)
-                return np.random.normal(
-                    middle_dds[age_step],
-                    statistics.mean([
-                        middle_dds[age_step] - low_dds[age_step],
-                        high_dds[age_step] - middle_dds[age_step]
-                    ])
+            start = start_dd(interval.mid)
+            std = start_std(interval.mid)
+
+            all_args = [interval.mid, oldest_age]
+            all_kwargs = dict(
+                domain_size=domain_size,
+                return_steps=True,
+            )
+            mid_kwargs = all_kwargs.copy()
+            mid_kwargs["start_dd_adjust"] = start
+
+            high_kwargs = all_kwargs.copy()
+            high_kwargs["start_dd_adjust"] = start + std
+
+            low_kwargs = all_kwargs.copy()
+            low_kwargs["start_dd_adjust"] = start - std
+
+            if return_surfaces:
+                mid_kwargs["return_surface"] = "all"
+
+                middle_dds, middle_surfs = diffuse_d_over_D(*all_args, **mid_kwargs)
+                high_dds = diffuse_d_over_D(*all_args, **high_kwargs)
+                low_dds = diffuse_d_over_D(*all_args, **low_kwargs)
+
+                # Defining this in-place since it really isn't needed outside
+                # this function.
+                def dd_surf_from_rep(age, diam):
+                    age_step = math.floor(age * kappa / dls)
+                    dd = np.random.normal(
+                        middle_dds[age_step],
+                        statistics.mean([
+                            middle_dds[age_step] - low_dds[age_step],
+                            high_dds[age_step] - middle_dds[age_step]
+                        ])
+                    )
+                    surf = middle_surfs[age_step]
+                    surf_depth = np.max(surf) - np.min(surf)
+                    d_mult = dd * diam / surf_depth
+
+                    return dd, surf * d_mult
+
+                df.loc[df["diameter_bin"] == interval, ["d/D", "surface"]] = df.loc[
+                        df["diameter_bin"] == interval
+                    ].apply(
+                    lambda row: pd.Series(
+                        dd_surf_from_rep(row["age"], row["diameter"]),
+                        index=["d/D", "surface"]
+                    ),
+                    axis=1,
+                    result_type="expand",
                 )
 
-            df.loc[df["diameter_bin"] == interval, "d/D"] = df.loc[
-                df["diameter_bin"] == interval
-            ].apply(
-                lambda row: dd_from_rep(row["age"]),
-                axis=1
-            )
+            else:
+                middle_dds = diffuse_d_over_D(*all_args, **mid_kwargs)
+                high_dds = diffuse_d_over_D(*all_args, **high_kwargs)
+                low_dds = diffuse_d_over_D(*all_args, **low_kwargs)
+
+                # Defining this in-place since it really isn't needed outside
+                # this function.
+                def dd_from_rep(age):
+                    age_step = math.floor(age * kappa / dls)
+                    return np.random.normal(
+                        middle_dds[age_step],
+                        statistics.mean([
+                            middle_dds[age_step] - low_dds[age_step],
+                            high_dds[age_step] - middle_dds[age_step]
+                        ])
+                    )
+
+                df.loc[df["diameter_bin"] == interval, "d/D"] = df.loc[
+                    df["diameter_bin"] == interval
+                ].apply(
+                    lambda row: dd_from_rep(row["age"]),
+                    axis=1
+                )
 
     logger.info("diffuse_d_over_D_by_bin complete.")
 
     return df
+
+
+def make_crater_field(
+    df,
+    terrain_model,
+    transform,
+) -> npt.NDArray:
+    """
+    Returns a 2D numpy array whose values are heights.
+
+    The *df* should have a "surface" column which contains 2D numpy arrays,
+    presumably the output of diffuse_d_over_D_by_bin() with return_surfaces=True.
+
+    The *terrain_model* argument can either be an initial 2D Numpy Array which
+    contains elevation values for a surface which the craters in *df* will be
+    applied to and diffused over, or it can be a two-element sequence that contains
+    the number of rows and columns that an initial flat 2D Numpy Array will be
+    generated from.
+
+    """
+    logger.info("make_crater_field start.")
+
+    # # Establish initial height field:
+    # if len(terrain_model.shape) == 2:
+    #     u = terrain_model
+    # else:
+    #     u = np.zeros(terrain_model)
+
+    if abs(transform.a) != abs(transform.e):
+        raise ValueError("The transform does not have even spacing in X and Y.")
+    else:
+        gsd = transform.a
+
+    tm_window = get_data_window(terrain_model)
+
+    for row in df.itertuples(index=False):
+        surf = row.surface
+        if surf is None:
+            logger.info(f"There is no surface for this row: {row}")
+            continue
+        # So the below assumes that surf is square, and that it was built with
+        # diffuse_d_over_D():
+        surf_gsd = row.diameter * 2 / surf.shape[0]
+
+        new_surf = rescale(surf, surf_gsd / gsd, preserve_range=True, anti_aliasing=True)
+
+        r, c = rowcol(transform, row.x, row.y)
+
+        surf_window = Window(
+            c - int(new_surf.shape[1] / 2),
+            r - int(new_surf.shape[0] / 2),
+            new_surf.shape[1],
+            new_surf.shape[0]
+        )
+        tm_slices, surf_slices = to_relative_slices(tm_window, surf_window)
+        terrain_model[tm_slices] += new_surf[surf_slices]
+
+    return terrain_model
+
+
+def to_relative_slices(w1: Window, w2: Window):
+    if not intersect(w1, w2):
+        raise ValueError("The two windows do not intersect.")
+
+    w1_r1 = Window(0, 0, w1.width, w1.height)
+    w2_r1 = Window(
+        w2.col_off - w1.col_off, w2.row_off - w1.row_off, w2.width, w2.height
+    )
+
+    w1_r2 = Window(
+        w1.col_off - w2.col_off, w1.row_off - w2.row_off, w1.width, w1.height
+    )
+    w2_r2 = Window(0, 0, w2.width, w2.height)
+
+    return w1_r1.intersection(w2_r1).toslices(), w2_r2.intersection(w1_r2).toslices()

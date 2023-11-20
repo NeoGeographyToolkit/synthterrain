@@ -37,9 +37,10 @@ def synthesize(
     by_bin=True,
     min_d=None,
     max_d=None,
+    return_surfaces=False,
 ):
     """Return a pandas DataFrame which contains craters and their properties
-       synthesized from the input parameters.
+    synthesized from the input parameters.
     """
     if production_fn is None:
         production_fn = determine_production_function(crater_dist.a, crater_dist.b)
@@ -64,15 +65,6 @@ def synthesize(
         f"{math.ceil(df['age'].max()):,} years."
     )
 
-    # Generate depth to diameter ratio
-    if by_bin:
-        df = diffuse_d_over_D_by_bin(df, start_dd_mean="Stopar step")
-    else:
-        df["d/D"] = df.apply(
-            lambda crater: diffuse_d_over_D(crater["diameter"], crater["age"]),
-            axis=1,
-        )
-
     # Randomly generate positions within the polygon for the locations of
     # the craters.
     logger.info("Generating center positions.")
@@ -81,6 +73,28 @@ def synthesize(
     # Add x and y positional information to the dataframe
     df["x"] = xlist
     df["y"] = ylist
+
+    # Generate depth to diameter ratio
+    if by_bin:
+        df = diffuse_d_over_D_by_bin(
+            df, start_dd_mean="Stopar step", return_surfaces=return_surfaces
+        )
+    else:
+        if return_surfaces:
+            df["surface"] = None
+            df["surface"].astype(object)
+            df["d/D", "surface"] = df.apply(
+                lambda crater: diffuse_d_over_D(
+                    crater["diameter"], crater["age"], return_surface=True
+                ),
+                axis=1,
+                result_type="expand",
+            )
+        else:
+            df["d/D"] = df.apply(
+                lambda crater: diffuse_d_over_D(crater["diameter"], crater["age"]),
+                axis=1,
+            )
 
     return df
 
@@ -96,8 +110,8 @@ def determine_production_function(a: float, b: float):
 
 def random_points(poly: Polygon, num_points: int):
     """Returns two lists, the first being the x coordinates, and the second
-       being the y coordinates, each *num_points* long that represent
-       random locations within the provided *poly*.
+    being the y coordinates, each *num_points* long that represent
+    random locations within the provided *poly*.
     """
     # We could have returned a list of shapely Point objects, but that's
     # not how we need the data later.
@@ -130,9 +144,7 @@ def generate_diameters(crater_dist, area, min, max):
 
     while len(diameters) != size:
         d = crater_dist.rvs(size=(size - len(diameters)))
-        diameters += d[
-            np.logical_and(min <= d, d <= max)
-        ].tolist()
+        diameters += d[np.logical_and(min <= d, d <= max)].tolist()
 
     return np.array(diameters)
 
@@ -177,13 +189,13 @@ def plot(df):
         cumulative=-1,
         log=True,
         bins=50,
-        histtype='stepfilled',
-        label="Craters"
+        histtype="stepfilled",
+        label="Craters",
     )
     ax_csfd.set_ylabel("Count")
     ax_csfd.yaxis.set_major_formatter(ScalarFormatter())
     ax_csfd.set_xlabel("Diameter (m)")
-    ax_csfd.legend(loc='best', frameon=False)
+    ax_csfd.legend(loc="best", frameon=False)
 
     ax_age.scatter(df["diameter"], df["age"], alpha=0.2, edgecolors="none", s=10)
     ax_age.set_xscale("log")
@@ -199,9 +211,8 @@ def plot(df):
     ax_dd.set_xlabel("Diameter (m)")
 
     patches = [
-        Circle((x_, y_), s_) for x_, y_, s_ in np.broadcast(
-            df["x"], df["y"], df["diameter"] / 2
-        )
+        Circle((x_, y_), s_)
+        for x_, y_, s_ in np.broadcast(df["x"], df["y"], df["diameter"] / 2)
     ]
     collection = PatchCollection(patches)
     collection.set_array(df["d/D"])  # Sets circle color to this data property.
@@ -215,7 +226,6 @@ def plot(df):
 
 
 def to_file(df: pd.DataFrame, outfile: Path, xml=False):
-
     if xml:
         # Write out the dataframe in the XML style of the old MATLAB
         # program.

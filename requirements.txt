@@ -3,5 +3,6 @@ numpy
 opensimplex
 pandas
 rasterio
+scikit-image
 scipy
 shapely

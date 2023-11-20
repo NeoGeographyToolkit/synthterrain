@@ -10,13 +10,19 @@
 # top level of this library.
 
 import logging
+import math
 from pathlib import Path
 import sys
 
+import numpy as np
+import rasterio
+from rasterio.transform import from_origin
+from rasterio.windows import from_bounds
 from shapely.geometry import box
 
 import synthterrain.crater as crater
 from synthterrain.crater import functions
+from synthterrain.crater.diffusion import make_crater_field
 import synthterrain.util as util
 
 
@@ -77,6 +83,11 @@ def arg_parser():
              "plots after the program has generated the data."
     )
     parser.add_argument(
+        "-proj",
+        help="If -t is given this is needed to determine the proj string for the "
+        "output GeoTIFF.  e.g. '+proj=eqc +R=1737400 +units=m'"
+    )
+    parser.add_argument(
         "--run_individual",
         # Inverted the action to typically be set to true as it will be
         # given to the by_bin parameter of synthesize.
@@ -88,6 +99,14 @@ def arg_parser():
              "The default behavior is to gather the craters into diameter bins "
              "and only run a few representative diffusion models to span the "
              "parameter space."
+    )
+    parser.add_argument(
+        "-t", "--terrain_gsd",
+        type=float,
+        help="If provided, will trigger creation of a terrain model based on bbox, and "
+        "the value given here will set the ground sample distance (GSD) of that model. "
+        "The terrain model output file will be the same as --outfile, but with a .tif "
+        "ending."
     )
     parser.add_argument(
         "-x", "--xml",
@@ -132,7 +151,8 @@ def main():
         polygon=poly,
         by_bin=args.run_individual,
         min_d=args.mind,
-        max_d=args.maxd
+        max_d=args.maxd,
+        return_surfaces=bool(args.terrain_gsd)
     )
 
     if args.plot:
@@ -140,6 +160,29 @@ def main():
 
     # Write out results.
     crater.to_file(df, args.outfile, args.xml)
+
+    if args.terrain_gsd is not None:
+        transform = from_origin(
+            poly.bounds[0], poly.bounds[3], args.terrain_gsd, args.terrain_gsd
+        )
+        window = from_bounds(*poly.bounds, transform=transform)
+
+        tm = make_crater_field(
+            df, np.zeros((math.ceil(window.height), math.ceil(window.width))), transform
+        )
+
+        with rasterio.open(
+                args.outfile.with_suffix(".tif"),
+                'w',
+                driver='GTiff',
+                height=tm.shape[0],
+                width=tm.shape[1],
+                count=1,
+                dtype=tm.dtype,
+                crs=args.proj,
+                transform=transform,
+        ) as dst:
+            dst.write(tm, 1)
 
     return
 
