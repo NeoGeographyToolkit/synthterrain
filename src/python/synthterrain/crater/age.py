@@ -56,12 +56,13 @@ def estimate_age(diameter, dd, max_age):
     if dd > fresh_dd:
         return 0
 
-    dd_rev_list = list(reversed(diffuse_d_over_D(
-        diameter,
-        max_age,
-        start_dd_adjust=fresh_dd,
-        return_steps=True
-    )))
+    dd_rev_list = list(
+        reversed(
+            diffuse_d_over_D(
+                diameter, max_age, start_dd_adjust=fresh_dd, return_steps=True
+            )
+        )
+    )
     nsteps = len(dd_rev_list)
 
     age_step = bisect.bisect_left(dd_rev_list, dd)
@@ -119,14 +120,16 @@ def estimate_age_by_bin(
         )
 
     df["diameter_bin"] = pd.cut(
-        df["diameter"], bins=bin_edges, include_lowest=True,
+        df["diameter"],
+        bins=bin_edges,
+        include_lowest=True,
     )
 
     # df["equilibrium_age"] = equilibrium_ages(df["diameter"], pd_csfd, eq_csfd)
     df["age"] = 0
 
     for i, (interval, count) in enumerate(
-            df["diameter_bin"].value_counts(sort=False).items()
+        df["diameter_bin"].value_counts(sort=False).items()
     ):
         logger.info(
             f"Processing bin {i + 1}/{total_bins}, interval: {interval}, count: {count}"
@@ -142,12 +145,13 @@ def estimate_age_by_bin(
         else:
             age = 4.5e9
 
-        dd_rev_list = list(reversed(diffuse_d_over_D(
-            interval.mid,
-            age,
-            start_dd_adjust=fresh_dd,
-            return_steps=True
-        )))
+        dd_rev_list = list(
+            reversed(
+                diffuse_d_over_D(
+                    interval.mid, age, start_dd_adjust=fresh_dd, return_steps=True
+                )
+            )
+        )
         nsteps = len(dd_rev_list)
         years_per_step = age / nsteps
 
@@ -157,10 +161,7 @@ def estimate_age_by_bin(
 
         df.loc[df["diameter_bin"] == interval, "age"] = df.loc[
             df["diameter_bin"] == interval
-        ].apply(
-            lambda row: guess_age(row["d/D"]),
-            axis=1
-        )
+        ].apply(lambda row: guess_age(row["d/D"]), axis=1)
 
     df["age"] = df["age"].astype("int64")
 

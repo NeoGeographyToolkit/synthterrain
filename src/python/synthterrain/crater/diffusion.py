@@ -106,7 +106,7 @@ def diffuse_d_over_D(
     start_dd_std=0.02,
     return_steps=False,
     return_surface: Union[bool, str] = False,
-    crater_cls=FTmod_Crater
+    crater_cls=FTmod_Crater,
 ):
     """
     Returns a depth to diameter ratio of a crater of *diameter* in meters
@@ -202,16 +202,17 @@ def diffuse_d_over_D(
     # D * dt appears in the Hill (2020) diffusion calculation, but
     # we have formulated dls, such that D * dt = dls
 
-    dd_for_each_step = [(np.max(u) - np.min(u)) / diameter, ]
-    u_for_each_step = [u, ]
+    dd_for_each_step = [
+        (np.max(u) - np.min(u)) / diameter,
+    ]
+    u_for_each_step = [
+        u,
+    ]
     un = np.copy(u)
     for step in range(nsteps):
         un[1:-1, 1:-1] = u[1:-1, 1:-1] + dls * (
-            (
-                u[2:, 1:-1] - 2 * u[1:-1, 1:-1] + u[:-2, 1:-1]
-            ) / dx2 + (
-                u[1:-1, 2:] - 2 * u[1:-1, 1:-1] + u[1:-1, :-2]
-            ) / dx2
+            (u[2:, 1:-1] - 2 * u[1:-1, 1:-1] + u[:-2, 1:-1]) / dx2
+            + (u[1:-1, 2:] - 2 * u[1:-1, 1:-1] + u[1:-1, :-2]) / dx2
         )
         dd_for_each_step.append((np.max(un) - np.min(un)) / diameter)
         u = np.copy(un)
@@ -273,9 +274,7 @@ def diffuse_d_over_D_by_bin(
     """
     logger.info("diffuse_d_over_D_by_bin start.")
 
-    bin_edges = np.geomspace(
-        df["diameter"].min(), df["diameter"].max(), num=num + 1
-    )
+    bin_edges = np.geomspace(df["diameter"].min(), df["diameter"].max(), num=num + 1)
     # logger.info(f"{df.shape[0]} craters")
     logger.info(
         f"Divided the craters into {num} diameter bins (not all bins may have "
@@ -286,9 +285,9 @@ def diffuse_d_over_D_by_bin(
         # This is a 3-degree fit to the data from Stopar et al. (2017)
         # The resulting function, stopar_dD() will return d/D ratios when
         # given a diameter in meters.
-        stopar_poly = Polynomial([
-            1.23447427e-01, 1.49135061e-04, -6.16681361e-08, 7.08449143e-12
-        ])
+        stopar_poly = Polynomial(
+            [1.23447427e-01, 1.49135061e-04, -6.16681361e-08, 7.08449143e-12]
+        )
 
         def start_dd(diameter):
             if diameter < 850:
@@ -323,6 +322,7 @@ def diffuse_d_over_D_by_bin(
             return start_dd_std
 
     else:
+
         def start_dd(diameter):
             return start_dd_mean
 
@@ -338,9 +338,7 @@ def diffuse_d_over_D_by_bin(
     for i, (interval, count) in enumerate(
         df["diameter_bin"].value_counts(sort=False).items()
     ):
-        logger.info(
-            f"Processing bin {i}/{num}, interval: {interval}, count: {count}"
-        )
+        logger.info(f"Processing bin {i}/{num}, interval: {interval}, count: {count}")
 
         if count == 0:
             continue
@@ -360,7 +358,7 @@ def diffuse_d_over_D_by_bin(
                             start_dd_std=start_std(row["diameter"]),
                             return_surface=True,
                         ),
-                        index=["d/D", "surface"]
+                        index=["d/D", "surface"],
                     ),
                     axis=1,
                     result_type="expand",
@@ -416,10 +414,12 @@ def diffuse_d_over_D_by_bin(
                     age_step = math.floor(age * kappa / dls)
                     dd = np.random.normal(
                         middle_dds[age_step],
-                        statistics.mean([
-                            middle_dds[age_step] - low_dds[age_step],
-                            high_dds[age_step] - middle_dds[age_step]
-                        ])
+                        statistics.mean(
+                            [
+                                middle_dds[age_step] - low_dds[age_step],
+                                high_dds[age_step] - middle_dds[age_step],
+                            ]
+                        ),
                     )
                     surf = middle_surfs[age_step]
                     surf_depth = np.max(surf) - np.min(surf)
@@ -428,11 +428,11 @@ def diffuse_d_over_D_by_bin(
                     return dd, surf * d_mult
 
                 df.loc[df["diameter_bin"] == interval, ["d/D", "surface"]] = df.loc[
-                        df["diameter_bin"] == interval
-                    ].apply(
+                    df["diameter_bin"] == interval
+                ].apply(
                     lambda row: pd.Series(
                         dd_surf_from_rep(row["age"], row["diameter"]),
-                        index=["d/D", "surface"]
+                        index=["d/D", "surface"],
                     ),
                     axis=1,
                     result_type="expand",
@@ -449,18 +449,17 @@ def diffuse_d_over_D_by_bin(
                     age_step = math.floor(age * kappa / dls)
                     return np.random.normal(
                         middle_dds[age_step],
-                        statistics.mean([
-                            middle_dds[age_step] - low_dds[age_step],
-                            high_dds[age_step] - middle_dds[age_step]
-                        ])
+                        statistics.mean(
+                            [
+                                middle_dds[age_step] - low_dds[age_step],
+                                high_dds[age_step] - middle_dds[age_step],
+                            ]
+                        ),
                     )
 
                 df.loc[df["diameter_bin"] == interval, "d/D"] = df.loc[
                     df["diameter_bin"] == interval
-                ].apply(
-                    lambda row: dd_from_rep(row["age"]),
-                    axis=1
-                )
+                ].apply(lambda row: dd_from_rep(row["age"]), axis=1)
 
     logger.info("diffuse_d_over_D_by_bin complete.")
 
@@ -509,7 +508,9 @@ def make_crater_field(
         # diffuse_d_over_D():
         surf_gsd = row.diameter * 2 / surf.shape[0]
 
-        new_surf = rescale(surf, surf_gsd / gsd, preserve_range=True, anti_aliasing=True)
+        new_surf = rescale(
+            surf, surf_gsd / gsd, preserve_range=True, anti_aliasing=True
+        )
 
         r, c = rowcol(transform, row.x, row.y)
 
@@ -517,7 +518,7 @@ def make_crater_field(
             c - int(new_surf.shape[1] / 2),
             r - int(new_surf.shape[0] / 2),
             new_surf.shape[1],
-            new_surf.shape[0]
+            new_surf.shape[0],
         )
         tm_slices, surf_slices = to_relative_slices(tm_window, surf_window)
         terrain_model[tm_slices] += new_surf[surf_slices]

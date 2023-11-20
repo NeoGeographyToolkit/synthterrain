@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - black
   - bump2version
   - cookiecutter
   - flake8

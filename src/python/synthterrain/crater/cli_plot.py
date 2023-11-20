@@ -32,7 +32,7 @@ def arg_parser():
         "csv",
         type=Path,
         help="A CSV file with a header row, and the following columns: "
-             "x, y, diameter, age, d/D."
+        "x, y, diameter, age, d/D.",
     )
     return parser
 

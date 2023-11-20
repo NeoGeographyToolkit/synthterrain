@@ -9,14 +9,13 @@
 
 import unittest
 
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Polygon
 
 import synthterrain.crater as cr
 import synthterrain.crater.functions as fns
 
 
 class Test_Init(unittest.TestCase):
-
     def test_generate_diameters(self):
         min_d = 10
         max_d = 11
@@ -31,8 +30,6 @@ class Test_Init(unittest.TestCase):
         self.assertEqual(0, d[d > max_d].size)
 
     def test_random_points(self):
-
         poly = Polygon(((0, 0), (1, 0), (0, 1), (0, 0)))
 
         xs, ys = cr.random_points(poly, 5)
-

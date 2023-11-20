@@ -346,7 +346,6 @@ def plot(df, pmap=None, extent=None):
 
 
 def to_file(df: pd.DataFrame, outfile: Path, xml=False):
-
     if xml:
         # Write out the dataframe in the XML style of the old MATLAB
         # program.

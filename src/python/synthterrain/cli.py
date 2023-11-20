@@ -37,73 +37,76 @@ def arg_parser():
         nargs=4,
         type=float,
         default=[0, 1000, 1000, 0],
-        metavar=('MINX', 'MAXY', 'MAXX', 'MINY'),
+        metavar=("MINX", "MAXY", "MAXX", "MINY"),
         help="The coordinates of the bounding box, expressed in meters, to "
-             "evaluate in min-x, max-y, max-x, min-y order (which is ulx, "
-             "uly, lrx, lry, the GDAL pattern). "
-             "Default: %(default)s"
+        "evaluate in min-x, max-y, max-x, min-y order (which is ulx, "
+        "uly, lrx, lry, the GDAL pattern). "
+        "Default: %(default)s",
     )
     parser.add_argument(
-        "-c", "--craters",
+        "-c",
+        "--craters",
         type=Path,
         help="Crater CSV or XML file of pre-existing craters.  This option is usually "
-             "used as follows: A set of 'real' craters are identified from a target "
-             "area above a certain diameter (say 5 m/pixel) and given to this option. "
-             "Then --cr-mind and --cr_maxd are set to some range less than 5 m/pixel. "
-             "This generates synthetic craters in the specified range, and then uses "
-             "those synthetic craters in addition to the craters from --craters when "
-             "building the rock probability map."
+        "used as follows: A set of 'real' craters are identified from a target "
+        "area above a certain diameter (say 5 m/pixel) and given to this option. "
+        "Then --cr-mind and --cr_maxd are set to some range less than 5 m/pixel. "
+        "This generates synthetic craters in the specified range, and then uses "
+        "those synthetic craters in addition to the craters from --craters when "
+        "building the rock probability map.",
     )
     parser.add_argument(
         "--csfd",
         default="VIPER_Env_Spec",
         choices=csfd_dict.keys(),
         help="The name of the crater size-frequency distribution to use. "
-             f"Options are: {', '.join(csfd_dict.keys())}. "
-             "Default: %(default)s"
+        f"Options are: {', '.join(csfd_dict.keys())}. "
+        "Default: %(default)s",
     )
     parser.add_argument(
         "--cr_maxd",
         default=1000,
         type=float,
-        help="Maximum crater diameter in meters. Default: %(default)s"
+        help="Maximum crater diameter in meters. Default: %(default)s",
     )
     parser.add_argument(
         "--cr_mind",
         default=1,
         type=float,
-        help="Minimum crater diameter in meters. Default: %(default)s"
+        help="Minimum crater diameter in meters. Default: %(default)s",
     )
     parser.add_argument(
         "--rk_maxd",
         default=2,
         type=float,
-        help="Maximum crater diameter in meters. Default: %(default)s"
+        help="Maximum crater diameter in meters. Default: %(default)s",
     )
     parser.add_argument(
         "--rk_mind",
         default=0.1,
         type=float,
-        help="Minimum crater diameter in meters. Default: %(default)s"
+        help="Minimum crater diameter in meters. Default: %(default)s",
     )
     parser.add_argument(
-        "-p", "--plot",
+        "-p",
+        "--plot",
         action="store_true",
         help="This will cause a matplotlib windows to open with some summary "
-             "plots after the program has generated craters and then rocks."
+        "plots after the program has generated craters and then rocks.",
     )
     parser.add_argument(
-        "-x", "--xml",
+        "-x",
+        "--xml",
         action="store_true",
         help="Default output is in CSV format, but if given this will result "
-             "in XML output that conforms to the old MATLAB code."
+        "in XML output that conforms to the old MATLAB code.",
     )
     parser.add_argument(
         "--probability_map_gsd",
         type=float,
         default=1,
         help="This program builds a probability map to generate locations, and this "
-             "sets the ground sample distance in the units of --bbox for that map.",
+        "sets the ground sample distance in the units of --bbox for that map.",
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
@@ -111,18 +114,11 @@ def arg_parser():
         action=util.PrintDictAction,
         dict=csfd_dict,
         help="If given, will list detailed information about each of the "
-             "available CSFDs and exit."
+        "available CSFDs and exit.",
     )
-    group.add_argument(
-        "--cr_outfile",
-        type=Path,
-        help="Path to crater output file."
-    )
+    group.add_argument("--cr_outfile", type=Path, help="Path to crater output file.")
     parser.add_argument(
-        "--rk_outfile",
-        type=Path,
-        required=True,
-        help="Path to crater output file."
+        "--rk_outfile", type=Path, required=True, help="Path to crater output file."
     )
     return parser
 

@@ -17,7 +17,6 @@ import synthterrain.util as util
 
 
 class TestUtil(unittest.TestCase):
-
     def test_FileArgumentParser(self):
         p = util.FileArgumentParser()
 
@@ -41,12 +40,7 @@ class TestUtil(unittest.TestCase):
         a("dummy", "dummy", "dummy")
         self.assertEqual(
             m_print.call_args_list,
-            [
-                call("a"),
-                call("   a value"),
-                call("b"),
-                call("   b value")
-            ]
+            [call("a"), call("   a value"), call("b"), call("   b value")],
         )
         m_exit.assert_called_once()
 

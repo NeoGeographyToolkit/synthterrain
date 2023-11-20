@@ -56,8 +56,13 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 	rm -fr test-resources
 
-lint: ## check style with flake8
-	flake8 --max-complexity 10 --ignore E203,E501,W503 hiproc tests
+lint/flake8: ## check style with flake8
+	flake8 --max-complexity 10 --ignore E203,E501,W503 src/python/synthterrain tests
+
+lint/black: ## check style with black
+	black --check src/python/synthterrain tests
+
+lint: lint/flake8 lint/black
 
 test: ## run tests quickly with the default Python
 	pytest -s

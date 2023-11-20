@@ -15,7 +15,6 @@ from synthterrain.crater import functions as fns
 
 
 class Test_Ages(unittest.TestCase):
-
     def test_equilibrium_age(self):
         diameters = np.array([1, 2, 3, 4, 5, 10, 20, 50, 100])
         a = 1
@@ -24,11 +23,22 @@ class Test_Ages(unittest.TestCase):
         eq_func = fns.VIPER_Env_Spec(a=a, b=b)
         eq_ages = age.equilibrium_age(diameters, pd_func.csfd, eq_func.csfd)
 
-        np.testing.assert_allclose(eq_ages, np.array([
-            1.35931206e+06, 6.91870352e+06, 2.21362552e+07, 2.89919160e+07,
-            3.57407099e+07, 6.55084979e+07, 1.38188561e+08, 4.22354647e+08,
-            7.26330624e+08
-        ]))
+        np.testing.assert_allclose(
+            eq_ages,
+            np.array(
+                [
+                    1.35931206e06,
+                    6.91870352e06,
+                    2.21362552e07,
+                    2.89919160e07,
+                    3.57407099e07,
+                    6.55084979e07,
+                    1.38188561e08,
+                    4.22354647e08,
+                    7.26330624e08,
+                ]
+            ),
+        )
 
     def test_estimate_age(self):
         a = age.estimate_age(10, 0.09, 5e7)
@@ -38,15 +48,49 @@ class Test_Ages(unittest.TestCase):
         pd_func = fns.GNPF(a=1, b=1000)
         eq_func = fns.VIPER_Env_Spec(a=1, b=1000)
 
-        df = pd.DataFrame(data={
-            'diameter': [
-                1., 1., 2., 2., 3., 3., 4., 4., 5., 5., 10., 10.,
-                20., 20., 50., 50., 100., 100.
-            ],
-            'd/D': [
-                0.05, 0.1, 0.05, 0.1, 0.05, 0.1, 0.05, 0.1, 0.05, 0.1, 0.05, 0.1,
-                0.05, 0.1, 0.05, 0.12, 0.05, 0.13
-            ]}
+        df = pd.DataFrame(
+            data={
+                "diameter": [
+                    1.0,
+                    1.0,
+                    2.0,
+                    2.0,
+                    3.0,
+                    3.0,
+                    4.0,
+                    4.0,
+                    5.0,
+                    5.0,
+                    10.0,
+                    10.0,
+                    20.0,
+                    20.0,
+                    50.0,
+                    50.0,
+                    100.0,
+                    100.0,
+                ],
+                "d/D": [
+                    0.05,
+                    0.1,
+                    0.05,
+                    0.1,
+                    0.05,
+                    0.1,
+                    0.05,
+                    0.1,
+                    0.05,
+                    0.1,
+                    0.05,
+                    0.1,
+                    0.05,
+                    0.1,
+                    0.05,
+                    0.12,
+                    0.05,
+                    0.13,
+                ],
+            }
         )
         df_out = age.estimate_age_by_bin(
             df,
@@ -55,17 +99,38 @@ class Test_Ages(unittest.TestCase):
             eq_func.csfd,
         )
 
-        age_series = pd.Series([
-            2000000, 0, 6000000, 0, 12000000, 0, 25000000, 0, 36000000, 0, 63000000, 0,
-            138000000, 12000000, 424000000, 68000000, 702000000, 8000000
-        ], name="age")
+        age_series = pd.Series(
+            [
+                2000000,
+                0,
+                6000000,
+                0,
+                12000000,
+                0,
+                25000000,
+                0,
+                36000000,
+                0,
+                63000000,
+                0,
+                138000000,
+                12000000,
+                424000000,
+                68000000,
+                702000000,
+                8000000,
+            ],
+            name="age",
+        )
 
         pd.testing.assert_series_equal(age_series, df_out["age"])
 
-        df2 = pd.DataFrame(data={
-            'diameter': [100., 100., 100., 100.],
-            'd/D': [0.01, 0.06, 0.10, 0.17]
-        })
+        df2 = pd.DataFrame(
+            data={
+                "diameter": [100.0, 100.0, 100.0, 100.0],
+                "d/D": [0.01, 0.06, 0.10, 0.17],
+            }
+        )
 
         df2_out = age.estimate_age_by_bin(
             df2,

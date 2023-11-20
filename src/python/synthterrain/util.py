@@ -17,8 +17,8 @@ import synthterrain
 
 class FileArgumentParser(argparse.ArgumentParser):
     """This argument parser sets the fromfile_prefix_chars to the
-       at-symbol (@), treats lines that begin with the octothorpe (#)
-       as comments, and allows multiple argument elements per line.
+    at-symbol (@), treats lines that begin with the octothorpe (#)
+    as comments, and allows multiple argument elements per line.
     """
 
     def __init__(self, *args, **kwargs):
@@ -50,12 +50,12 @@ class FileArgumentParser(argparse.ArgumentParser):
 
 class PrintDictAction(argparse.Action):
     """A custom action that interrupts argument processing, prints
-       the contents of the *dict* argument, and then exits the
-       program.
+    the contents of the *dict* argument, and then exits the
+    program.
 
-       It may need to be placed in a mutually exclusive argument
-       group (see argparse documentation) with any required arguments
-       that your program should have.
+    It may need to be placed in a mutually exclusive argument
+    group (see argparse documentation) with any required arguments
+    that your program should have.
     """
 
     def __init__(self, *args, dict=None, **kwargs):
@@ -82,13 +82,13 @@ def parent_parser() -> argparse.ArgumentParser:
         "--verbose",
         action="count",
         default=0,
-        help="Displays additional information."
+        help="Displays additional information.",
     )
     parent.add_argument(
-        '--version',
-        action='version',
+        "--version",
+        action="version",
         version=f"synthterrain Software version {synthterrain.__version__}",
-        help="Show library version number."
+        help="Show library version number.",
     )
     return parent
 

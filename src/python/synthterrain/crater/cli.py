@@ -50,42 +50,43 @@ def arg_parser():
         nargs=4,
         type=float,
         default=[0, 1000, 1000, 0],
-        metavar=('MINX', 'MAXY', 'MAXX', 'MINY'),
+        metavar=("MINX", "MAXY", "MAXX", "MINY"),
         help="The coordinates of the bounding box, expressed in meters, to "
-             "evaluate in min-x, max-y, max-x, min-y order (which is ulx, "
-             "uly, lrx, lry, the GDAL pattern). "
-             "Default: %(default)s"
+        "evaluate in min-x, max-y, max-x, min-y order (which is ulx, "
+        "uly, lrx, lry, the GDAL pattern). "
+        "Default: %(default)s",
     )
     parser.add_argument(
         "--csfd",
         default="VIPER_Env_Spec",
         choices=csfd_dict.keys(),
         help="The name of the crater size-frequency distribution to use. "
-             f"Options are: {', '.join(csfd_dict.keys())}. "
-             "Default: %(default)s"
+        f"Options are: {', '.join(csfd_dict.keys())}. "
+        "Default: %(default)s",
     )
     parser.add_argument(
         "--maxd",
         default=1000,
         type=float,
-        help="Maximum crater diameter in meters. Default: %(default)s"
+        help="Maximum crater diameter in meters. Default: %(default)s",
     )
     parser.add_argument(
         "--mind",
         default=1,
         type=float,
-        help="Minimum crater diameter in meters. Default: %(default)s"
+        help="Minimum crater diameter in meters. Default: %(default)s",
     )
     parser.add_argument(
-        "-p", "--plot",
+        "-p",
+        "--plot",
         action="store_true",
         help="This will cause a matplotlib window to open with some summary "
-             "plots after the program has generated the data."
+        "plots after the program has generated the data.",
     )
     parser.add_argument(
         "-proj",
         help="If -t is given this is needed to determine the proj string for the "
-        "output GeoTIFF.  e.g. '+proj=eqc +R=1737400 +units=m'"
+        "output GeoTIFF.  e.g. '+proj=eqc +R=1737400 +units=m'",
     )
     parser.add_argument(
         "--run_individual",
@@ -93,26 +94,28 @@ def arg_parser():
         # given to the by_bin parameter of synthesize.
         action="store_false",
         help="If given, this will run a diffusion model for each synthetic "
-             "crater individually and depending on the area provided and the "
-             "crater range could cause this program to run for many hours as "
-             "it tried to calculate tens of thousands of diffusion models. "
-             "The default behavior is to gather the craters into diameter bins "
-             "and only run a few representative diffusion models to span the "
-             "parameter space."
+        "crater individually and depending on the area provided and the "
+        "crater range could cause this program to run for many hours as "
+        "it tried to calculate tens of thousands of diffusion models. "
+        "The default behavior is to gather the craters into diameter bins "
+        "and only run a few representative diffusion models to span the "
+        "parameter space.",
     )
     parser.add_argument(
-        "-t", "--terrain_gsd",
+        "-t",
+        "--terrain_gsd",
         type=float,
         help="If provided, will trigger creation of a terrain model based on bbox, and "
         "the value given here will set the ground sample distance (GSD) of that model. "
         "The terrain model output file will be the same as --outfile, but with a .tif "
-        "ending."
+        "ending.",
     )
     parser.add_argument(
-        "-x", "--xml",
+        "-x",
+        "--xml",
         action="store_true",
         help="Default output is in CSV format, but if given this will result "
-             "in XML output that conforms to the old MATLAB code."
+        "in XML output that conforms to the old MATLAB code.",
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
@@ -120,13 +123,9 @@ def arg_parser():
         action=util.PrintDictAction,
         dict=csfd_dict,
         help="If given, will list detailed information about each of the "
-             "available CSFDs and exit."
+        "available CSFDs and exit.",
     )
-    group.add_argument(
-        "-o", "--outfile",
-        type=Path,
-        help="Path to output file."
-    )
+    group.add_argument("-o", "--outfile", type=Path, help="Path to output file.")
     return parser
 
 
@@ -152,7 +151,7 @@ def main():
         by_bin=args.run_individual,
         min_d=args.mind,
         max_d=args.maxd,
-        return_surfaces=bool(args.terrain_gsd)
+        return_surfaces=bool(args.terrain_gsd),
     )
 
     if args.plot:
@@ -172,15 +171,15 @@ def main():
         )
 
         with rasterio.open(
-                args.outfile.with_suffix(".tif"),
-                'w',
-                driver='GTiff',
-                height=tm.shape[0],
-                width=tm.shape[1],
-                count=1,
-                dtype=tm.dtype,
-                crs=args.proj,
-                transform=transform,
+            args.outfile.with_suffix(".tif"),
+            "w",
+            driver="GTiff",
+            height=tm.shape[0],
+            width=tm.shape[1],
+            count=1,
+            dtype=tm.dtype,
+            crs=args.proj,
+            transform=transform,
         ) as dst:
             dst.write(tm, 1)
 
