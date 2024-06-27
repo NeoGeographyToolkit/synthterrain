@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """This module has tests for the synthterrain crater distribution functions."""
 
-# Copyright 2022, synthterrain developers.
+# Copyright 2022-2024, synthterrain developers.
 #
 # Reuse is permitted under the terms of the license.
 # The AUTHORS file and the LICENSE file are at the
@@ -103,4 +103,4 @@ class Test_Crater_rv_continuous(unittest.TestCase):
         self.assertRaises(ValueError, fns.NPF, a=10, b=300001)
         self.assertRaises(ValueError, fns.NPF, a=9, b=300)
         rv = fns.NPF(a=10, b=300000)
-        self.assertEqual(rv.csfd(10), 0.003796582136635746)
+        self.assertEqual(rv.csfd(10), 0.0037969668020723783)

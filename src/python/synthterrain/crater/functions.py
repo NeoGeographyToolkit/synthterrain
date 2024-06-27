@@ -4,14 +4,14 @@
 crater size-frequency distributions as probability distributions.
 """
 
-# Copyright 2022, United States Government as represented by the
+# Copyright 2022-2024, United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All rights reserved.
 
-from abc import ABC, abstractmethod
 import copy
 import logging
 import math
+from abc import ABC, abstractmethod
 from numbers import Number
 
 import numpy as np
@@ -67,11 +67,11 @@ class Crater_rv_continuous(ABC, rv_continuous):
     def __init__(self, a, **kwargs):
         if a <= 0:
             raise ValueError(
-                "The lower bound of the support of the distribution, a, must " "be > 0."
+                "The lower bound of the support of the distribution, a, must be > 0."
             )
-        else:
-            kwargs["a"] = a
-            super().__init__(**kwargs)
+
+        kwargs["a"] = a
+        super().__init__(**kwargs)
 
     @abstractmethod
     def csfd(self, d):
@@ -217,8 +217,8 @@ class VIPER_Env_Spec(Crater_rv_continuous):
         out = c / (1000 * 1000)
         if isinstance(d, Number):
             return out.item()
-        else:
-            return out
+
+        return out
 
     # See comment on commented out parent isfd() function.
     # def isfd(self, d):
@@ -478,7 +478,8 @@ class NPF(Coef_Distribution):
         kwargs["b"] = b
         super().__init__(
             coef=[
-                -3.0768,
+                -3.076756,
+                # -3.0768,
                 -3.557528,
                 0.781027,
                 1.021521,
@@ -799,8 +800,8 @@ class GNPF_old(NPF):
 
         if isinstance(d, Number):
             return c.item()
-        else:
-            return c
+
+        return c
 
     # def isfd(self, d):
     #     if isinstance(d, Number):
@@ -846,8 +847,8 @@ class GNPF_old(NPF):
 
         if isinstance(d, Number):
             return c.item()
-        else:
-            return c
+
+        return c
 
 
 class GNPF(NPF):
@@ -889,8 +890,6 @@ class GNPF(NPF):
         grun_kwargs["csfds"] = fluxes
         self.grun = Interp_Distribution(**grun_kwargs)
 
-        return
-
     def csfd(self, d):
         if isinstance(d, Number):
             # Convert to numpy array, if needed.
@@ -908,8 +907,8 @@ class GNPF(NPF):
 
         if isinstance(d, Number):
             return c.item()
-        else:
-            return c
+
+        return c
 
     def _cdf(self, d):
         if isinstance(d, Number):

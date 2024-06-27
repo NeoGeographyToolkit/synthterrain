@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """This module has tests for the synthterrain crater age functions."""
 
-# Copyright 2023, United States Government as represented by the
+# Copyright 2023-2024, United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All rights reserved.
 
@@ -27,17 +27,18 @@ class Test_Ages(unittest.TestCase):
             eq_ages,
             np.array(
                 [
-                    1.35931206e06,
-                    6.91870352e06,
-                    2.21362552e07,
-                    2.89919160e07,
-                    3.57407099e07,
-                    6.55084979e07,
-                    1.38188561e08,
-                    4.22354647e08,
-                    7.26330624e08,
+                    1.359312e06,
+                    6.918704e06,
+                    2.213654e07,
+                    2.899164e07,
+                    3.573974e07,
+                    6.550186e07,
+                    1.381746e08,
+                    4.223119e08,
+                    7.262570e08,
                 ]
             ),
+            rtol=1e-6,
         )
 
     def test_estimate_age(self):
