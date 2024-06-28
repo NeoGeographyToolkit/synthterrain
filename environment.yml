@@ -16,3 +16,6 @@ dependencies:
   - scikit-image
   - scipy
   - shapely
+  - pip
+  - pip:
+    - opensimplex
