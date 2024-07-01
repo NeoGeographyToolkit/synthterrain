@@ -62,6 +62,10 @@ lint/flake8: ## check style with flake8
 lint/black: ## check style with black
 	black --check src/python/synthterrain tests
 
+lint/ufmt: ## check format with ufmt
+	ufmt check src/python/synthterrain
+	ufmt check tests
+
 lint: lint/flake8 lint/black
 
 test: ## run tests quickly with the default Python
@@ -86,6 +90,9 @@ coverage: ## check code coverage quickly with the default Python
 
 # servedocs: docs ## compile the docs watching for changes
 # 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
+
+release-check: dist ## check state of distribution
+	twine check dist/*
 
 release: dist ## package and upload a release
 	twine upload dist/*
