@@ -1,24 +1,30 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Generates synthetic rock populations.
 """
 
-# Copyright 2022, synthterrain developers.
+# Copyright © 2024, United States Government, as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All rights reserved.
 #
-# Reuse is permitted under the terms of the license.
-# The AUTHORS file and the LICENSE file are at the
-# top level of this library.
+# The “synthterrain” software is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License
+# at http://www.apache.org/licenses/LICENSE-2.0.
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 import logging
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from shapely.geometry import box
 
-import synthterrain.crater as crater
-import synthterrain.rock as rock
+from synthterrain import crater, rock, util
 from synthterrain.rock import functions
-import synthterrain.util as util
 
 logger = logging.getLogger(__name__)
 
@@ -120,8 +126,6 @@ def main():
 
     # Write out results.
     rock.to_file(df, args.outfile, args.xml)
-
-    return
 
 
 if __name__ == "__main__":

@@ -1,18 +1,26 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Generates synthetic crater populations.
 """
 
-# Copyright 2022, synthterrain developers.
+# Copyright © 2024, United States Government, as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All rights reserved.
 #
-# Reuse is permitted under the terms of the license.
-# The AUTHORS file and the LICENSE file are at the
-# top level of this library.
+# The “synthterrain” software is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License
+# at http://www.apache.org/licenses/LICENSE-2.0.
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 import logging
 import math
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import numpy as np
 import rasterio
@@ -20,16 +28,15 @@ from rasterio.transform import from_origin
 from rasterio.windows import from_bounds
 from shapely.geometry import box
 
-import synthterrain.crater as crater
+from synthterrain import crater, util
 from synthterrain.crater import functions
 from synthterrain.crater.diffusion import make_crater_field
-import synthterrain.util as util
 
 
 logger = logging.getLogger(__name__)
 
 # Assemble this global variable value.
-csfd_dict = dict()
+csfd_dict = {}
 for fn in functions.equilibrium_functions:
     csfd_dict[fn.__name__] = fn.__doc__
 
@@ -182,8 +189,6 @@ def main():
             transform=transform,
         ) as dst:
             dst.write(tm, 1)
-
-    return
 
 
 if __name__ == "__main__":

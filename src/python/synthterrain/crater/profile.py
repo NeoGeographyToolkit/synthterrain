@@ -3,11 +3,20 @@ Martin, Parkes, and Dunstan (2014),
 https:doi.org/10.1109/TAES.2014.120282
 ."""
 
-# Copyright 2022, synthterrain developers.
+# Copyright © 2024, United States Government, as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All rights reserved.
 #
-# Reuse is permitted under the terms of the license.
-# The AUTHORS file and the LICENSE file are at the
-# top level of this library.
+# The “synthterrain” software is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License
+# at http://www.apache.org/licenses/LICENSE-2.0.
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 # Consider attempting to implement the Mahanti et al. (2014,
 # https://doi.org/10.1016/j.icarus.2014.06.023) Chebyshev polynomial approach.
@@ -228,9 +237,10 @@ class MPD_Crater(Crater):
         if -1 <= x <= alpha:
             return self.h1(x, self.hr, self.h, self.hr0)
 
-        elif alpha <= x <= 0:
+        if alpha <= x <= 0:
             return self.h2(x, self.hr, self.h, self.hr0, alpha, self.tr, self.pr)
-        elif 0 <= x <= beta:
+
+        if 0 <= x <= beta:
             # return self.h3(
             return self.h3_alt(
                 self.diameter,
@@ -244,12 +254,12 @@ class MPD_Crater(Crater):
                 self.tr,
                 self.pr,
             )
-        elif beta <= x:
+
+        if beta <= x:
             return self.h4(x, self.diameter, self.fc(x, self.emin, self.tr, self.pr))
 
-        else:
-            # Really should not be able to get here.
-            raise ValueError(err_msg)
+        # Really should not be able to get here.
+        raise ValueError(err_msg)
 
     @staticmethod
     def height_naught(diameter: float):

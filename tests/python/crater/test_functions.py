@@ -1,18 +1,26 @@
-#!/usr/bin/env python
 """This module has tests for the synthterrain crater distribution functions."""
 
-# Copyright 2022-2024, synthterrain developers.
+# Copyright © 2024, United States Government, as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All rights reserved.
 #
-# Reuse is permitted under the terms of the license.
-# The AUTHORS file and the LICENSE file are at the
-# top level of this library.
+# The “synthterrain” software is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License
+# at http://www.apache.org/licenses/LICENSE-2.0.
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 import unittest
 
 import numpy as np
 from numpy.polynomial import Polynomial
 
-import synthterrain.crater.functions as fns
+import synthterrain.crater.functions as fns  # usort: skip
 
 
 class Test_Crater_rv_continuous(unittest.TestCase):

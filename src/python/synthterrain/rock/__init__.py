@@ -1,31 +1,39 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Generates synthetic rock populations.
 """
 
-# Copyright 2022, synthterrain developers.
+# Copyright © 2024, United States Government, as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All rights reserved.
 #
-# Reuse is permitted under the terms of the license.
-# The AUTHORS file and the LICENSE file are at the
-# top level of this library.
+# The “synthterrain” software is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License
+# at http://www.apache.org/licenses/LICENSE-2.0.
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 import logging
 import math
-from pathlib import Path
 import time
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 import opensimplex
+import pandas as pd
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Circle
-import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
-import numpy as np
 from rasterio.features import geometry_mask
 from rasterio.transform import from_origin, rowcol, xy
-from rasterio.windows import Window, from_bounds, intersect, shape
-import pandas as pd
+from rasterio.windows import from_bounds, intersect, shape, Window
 from shapely.geometry import Polygon
-
 
 from synthterrain.crater import generate_diameters
 from synthterrain.crater.functions import Crater_rv_continuous

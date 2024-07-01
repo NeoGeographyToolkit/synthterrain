@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Performs diffusion of a crater shape.
@@ -10,11 +9,20 @@ at
 https://scipython.com/book2/chapter-7-matplotlib/examples/the-two-dimensional-diffusion-equation/
 """
 
-# Copyright 2022, synthterrain developers.
+# Copyright © 2024, United States Government, as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All rights reserved.
 #
-# Reuse is permitted under the terms of the license.
-# The AUTHORS file and the LICENSE file are at the
-# top level of this library.
+# The “synthterrain” software is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License
+# at http://www.apache.org/licenses/LICENSE-2.0.
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 import logging
 import math
@@ -23,10 +31,10 @@ from typing import Union
 
 import numpy as np
 import numpy.typing as npt
-from numpy.polynomial import Polynomial
 import pandas as pd
+from numpy.polynomial import Polynomial
 from rasterio.transform import rowcol
-from rasterio.windows import Window, get_data_window, intersect
+from rasterio.windows import get_data_window, intersect, Window
 from skimage.transform import rescale
 
 from synthterrain.crater.profile import FTmod_Crater, stopar_fresh_dd
@@ -226,10 +234,11 @@ def diffuse_d_over_D(
 
     if return_surface == "all":
         return dd, u_for_each_step
-    elif return_surface:
+
+    if return_surface:
         return dd, u_for_each_step[-1]
-    else:
-        return dd
+
+    return dd
 
 
 def diffuse_d_over_D_by_bin(
@@ -292,14 +301,12 @@ def diffuse_d_over_D_by_bin(
         def start_dd(diameter):
             if diameter < 850:
                 return stopar_poly(diameter)
-            else:
-                return 0.2
+            return 0.2
 
         def start_std(diameter):
             if diameter < 10:
                 return start_dd_std + 0.01
-            else:
-                return start_dd_std
+            return start_dd_std
 
     elif start_dd_mean == "Stopar step":
         # Stopar et al. (2017) define a set of graduate d/D categories
@@ -342,7 +349,8 @@ def diffuse_d_over_D_by_bin(
 
         if count == 0:
             continue
-        elif 0 < count <= 3:
+
+        if 0 < count <= 3:
             # Run individual models for each crater.
             if return_surfaces:
                 df.loc[df["diameter_bin"] == interval, ["d/D", "surface"]] = df.loc[
@@ -494,8 +502,8 @@ def make_crater_field(
 
     if abs(transform.a) != abs(transform.e):
         raise ValueError("The transform does not have even spacing in X and Y.")
-    else:
-        gsd = transform.a
+
+    gsd = transform.a
 
     tm_window = get_data_window(terrain_model)
 

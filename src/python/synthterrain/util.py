@@ -1,16 +1,24 @@
-#!/usr/bin/env python
 """This module contains viss utility functions."""
 
-# Copyright 2022, synthterrain developers.
+# Copyright © 2024, United States Government, as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All rights reserved.
 #
-# Reuse is permitted under the terms of the license.
-# The AUTHORS file and the LICENSE file are at the
-# top level of this library.
+# The “synthterrain” software is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License
+# at http://www.apache.org/licenses/LICENSE-2.0.
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 import argparse
 import logging
-import textwrap
 import sys
+import textwrap
 
 import synthterrain
 
@@ -43,9 +51,9 @@ class FileArgumentParser(argparse.ArgumentParser):
 
     def convert_arg_line_to_args(self, arg_line):
         if arg_line.startswith("#"):
-            return list()
-        else:
-            return arg_line.split()
+            return []
+
+        return arg_line.split()
 
 
 class PrintDictAction(argparse.Action):
@@ -95,7 +103,7 @@ def parent_parser() -> argparse.ArgumentParser:
 
 def set_logger(verblvl=None) -> None:
     """Sets the log level and configuration for applications."""
-    logger = logging.getLogger(__name__.split(".")[0])
+    logger = logging.getLogger(__name__.split(".", maxsplit=1)[0])
     lvl_dict = {0: logging.WARNING, 1: logging.INFO, 2: logging.DEBUG}
     if verblvl in lvl_dict:
         lvl = lvl_dict[verblvl]
@@ -114,5 +122,3 @@ def set_logger(verblvl=None) -> None:
 
     ch.setFormatter(formatter)
     logger.addHandler(ch)
-
-    return

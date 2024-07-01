@@ -1,25 +1,34 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Generates synthetic crater populations.
 """
 
-# Copyright 2022-2023, synthterrain developers.
+# Copyright © 2024, United States Government, as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All rights reserved.
 #
-# Reuse is permitted under the terms of the license.
-# The AUTHORS file and the LICENSE file are at the
-# top level of this library.
+# The “synthterrain” software is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License
+# at http://www.apache.org/licenses/LICENSE-2.0.
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 import logging
 import math
-from pathlib import Path
 import random
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Circle
-import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
-import numpy as np
-import pandas as pd
 from shapely.geometry import Point, Polygon
 
 from synthterrain.crater import functions
@@ -102,10 +111,10 @@ def synthesize(
 def determine_production_function(a: float, b: float):
     if a >= 10:
         return functions.NPF(a, b)
-    elif b <= 2.76:
+    if b <= 2.76:
         return functions.Grun(a, b)
-    else:
-        return functions.GNPF(a, b)
+
+    return functions.GNPF(a, b)
 
 
 def random_points(poly: Polygon, num_points: int):
@@ -117,8 +126,8 @@ def random_points(poly: Polygon, num_points: int):
     # not how we need the data later.
     min_x, min_y, max_x, max_y = poly.bounds
     # points = []
-    x_list = list()
-    y_list = list()
+    x_list = []
+    y_list = []
     # while len(points) < num_points:
     while len(x_list) < num_points:
         random_point = Point(
@@ -140,7 +149,7 @@ def generate_diameters(crater_dist, area, min, max):
     larger than *max* will be returned.
     """
     size = crater_dist.count(area, min) - crater_dist.count(area, max)
-    diameters = list()
+    diameters = []
 
     while len(diameters) != size:
         d = crater_dist.rvs(size=(size - len(diameters)))
@@ -222,7 +231,6 @@ def plot(df):
     fig.colorbar(collection, ax=ax_location)
 
     plt.show()
-    return
 
 
 def to_file(df: pd.DataFrame, outfile: Path, xml=False):
@@ -254,8 +262,6 @@ def to_file(df: pd.DataFrame, outfile: Path, xml=False):
             index=False,
             columns=["x", "y", "diameter", "age", "d/D"],
         )
-
-    return
 
 
 def from_file(infile: Path):

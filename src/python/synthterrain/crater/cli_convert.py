@@ -1,25 +1,33 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Converts between the crater CSV and XML formats.
 """
 
-# Copyright 2022, synthterrain developers.
+# Copyright © 2024, United States Government, as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All rights reserved.
 #
-# Reuse is permitted under the terms of the license.
-# The AUTHORS file and the LICENSE file are at the
-# top level of this library.
+# The “synthterrain” software is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License
+# at http://www.apache.org/licenses/LICENSE-2.0.
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 import argparse
 import logging
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pandas as pd
 
-import synthterrain.crater as crater
-from synthterrain.crater.age import estimate_age_by_bin
 import synthterrain.crater.functions as crater_func
-import synthterrain.util as util
+
+from synthterrain import crater, util
+from synthterrain.crater.age import estimate_age_by_bin
 
 
 logger = logging.getLogger(__name__)
@@ -104,7 +112,7 @@ def main():
 
     crater.to_file(df, args.outfile, xml=(args.outfile.suffix.casefold() == ".xml"))
 
-    return
+    return None
 
 
 if __name__ == "__main__":
