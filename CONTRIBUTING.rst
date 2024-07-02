@@ -65,40 +65,37 @@ Ready to contribute? Here's how to set up `synthterrain` for local development.
 1. Fork the `synthterrain` repo on GitHub.
 2. Clone your fork locally::
 
-    $ git clone git@github.com:your_name_here/synthterrain.git
+    $> git clone git@github.com:your_name_here/synthterrain.git
 
 3. Install your local copy into a virtual environment of your choice (there are many to choose from like conda, etc.). We will assume conda here, but any should work::
 
-    $ cd synthterrain/
-    $ conda env create -n synthterrain
-    $ conda activate synthterrain
-    $ mamba env update --file environment_dev.yml
-    $ mamba env update --file environment.yml
-    $ pip install opensimplex
-    $ pip install --no-deps -e .
+    $> cd synthterrain/
+    $> conda env create -n synthterrain
+    $> conda activate synthterrain
+    $> mamba env update --file environment_dev.yml
+    $> mamba env update --file environment.yml
+    $> pip install --no-deps -e .
 
    The last ``pip install`` installs synthterrain in "editable" mode which facilitates using the programs and testing.
 
 4. Create a branch for local development::
 
-    $ git checkout -b name-of-your-bugfix-or-feature
+    $> git checkout -b name-of-your-bugfix-or-feature
 
    Now you can make your changes locally.
 
 5. When you're done making changes, check that your changes pass flake8 and the
-   tests, including testing other Python versions with tox::
+   tests.
 
-    $ flake8 src/synthterrain tests
-    $ python setup.py test or pytest
-    $ tox
+    $> make lint
+    $> make test
 
-   To get flake8 and tox, just pip install them into your virtual environment.
 
 6. Commit your changes and push your branch to GitHub::
 
-    $ git add .
-    $ git commit -m "Your detailed description of your changes."
-    $ git push origin name-of-your-bugfix-or-feature
+    $> git add .
+    $> git commit -m "Your detailed description of your changes."
+    $> git push origin name-of-your-bugfix-or-feature
 
 7. Submit a pull request through the GitHub website.
 
