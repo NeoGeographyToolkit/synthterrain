@@ -17,7 +17,7 @@ Features
 --------
 
 The synthterrain package currently offers these command-line programs
-when it is installed (see the CONTRIBUTING document).  Arguments
+when it is installed (see below).  Arguments
 can be found by running any program with a ``-h`` flag.
 
 ``synthcraters``
@@ -65,7 +65,27 @@ You can mix regular arguments and ampersand-arguments if you wish.
 
 Installation
 ------------
-TBD.
+
+Clone or download this repository.
+
+It is highly suggested to install this into a virtual Python environment.
+
+Change directory to where you have downloaded this repository after you have
+set up your virtual environment, just do this::
+
+$> pip install
+
+
+or::
+
+$> make install
+
+If you use conda for your virtual environment, you can do this::
+
+$> conda create -n synthterrain
+$> conda activate synthterrain
+$> conda env update --file environment.yml
+
 
 
 Contributing
