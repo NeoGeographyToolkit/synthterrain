@@ -57,16 +57,16 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr test-resources
 
 lint/flake8: ## check style with flake8
-	flake8 --max-complexity 10 --ignore E203,E501,W503 src/python/synthterrain tests
+	flake8 src/python/synthterrain tests/python/
 
 lint/black: ## check style with black
 	black --check src/python/synthterrain tests
 
 lint/ufmt: ## check format with ufmt
 	ufmt check src/python/synthterrain
-	ufmt check tests
+	ufmt check tests/python
 
-lint: lint/flake8 lint/black
+lint: lint/flake8 lint/black lint/ufmt
 
 test: ## run tests quickly with the default Python
 	pytest -s
