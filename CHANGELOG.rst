@@ -27,6 +27,9 @@ and the release date, in year-month-day format (see examples below).
 
 Unreleased
 ----------
-0.1.0 (2022-??-??)
 
-* First release.
+
+0.1.0 (2024-07-02)
+------------------
+
+- First release.
