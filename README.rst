@@ -55,7 +55,7 @@ For example, you could write a text file ``test1.txt`` that looks like this::
     --cr_mind 0.5
     --rk_maxd 2
     --rk_mind 0.1
-    --probability_map_gsd
+    --probability_map_gsd 0.5
     --cr_outfile test_cr.csv
     --rk_outfile test_rk.csv
 
