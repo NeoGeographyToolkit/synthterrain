@@ -3,11 +3,20 @@ Martin, Parkes, and Dunstan (2014),
 https:doi.org/10.1109/TAES.2014.120282
 ."""
 
-# Copyright 2022, synthterrain developers.
+# Copyright © 2024, United States Government, as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All rights reserved.
 #
-# Reuse is permitted under the terms of the license.
-# The AUTHORS file and the LICENSE file are at the
-# top level of this library.
+# The “synthterrain” software is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License
+# at http://www.apache.org/licenses/LICENSE-2.0.
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 # Consider attempting to implement the Mahanti et al. (2014,
 # https://doi.org/10.1016/j.icarus.2014.06.023) Chebyshev polynomial approach.
@@ -19,7 +28,7 @@ import numpy as np
 from numpy.polynomial import Polynomial
 
 
-class Crater():
+class Crater:
     """A base class for establishing characteristics for a crater, in order
     to query its elevation at particular radial distances."""
 
@@ -34,46 +43,45 @@ class Crater():
 
     def profile(self, r):
         """Implementing classes must override this function.
-           This function returns a numpy array of the same shape as
-           *r*.
-           This function returns the elevation of the crater profile
-           at the radial distance *r* where *r* is a fraction of the
-           crater radius.  Such that *r* = 0 is at the center, *r* = 1
-           is at the crater diameter, and values of *r* greater than 1
-           are distances outside the crater rim.
+        This function returns a numpy array of the same shape as
+        *r*.
+        This function returns the elevation of the crater profile
+        at the radial distance *r* where *r* is a fraction of the
+        crater radius.  Such that *r* = 0 is at the center, *r* = 1
+        is at the crater diameter, and values of *r* greater than 1
+        are distances outside the crater rim.
 
-           Values returned in the numpy array are elevation values
-           in the distance units of whatever units the self.diameter
-           parameter is in.  Values of zero are considered pre-existing
-           surface elevations.
+        Values returned in the numpy array are elevation values
+        in the distance units of whatever units the self.diameter
+        parameter is in.  Values of zero are considered pre-existing
+        surface elevations.
         """
         raise NotImplementedError(
-            f"The class {self.__name__} has not implemented elevation() as "
-            "required."
+            f"The class {self.__name__} has not implemented elevation() as " "required."
         )
 
 
 class FT_Crater(Crater):
     """A crater whose profile is defined by functions described in
-       Fassett and Thomson (2014, https://doi.org/10.1002/2014JE004698),
-       equation 4.
+    Fassett and Thomson (2014, https://doi.org/10.1002/2014JE004698),
+    equation 4.
     """
 
     def profile(self, r, radius_fix=True):
         """Returns a numpy array of elevation values based in the input numpy
-           array of radius fraction values, such that a radius fraction value
-           of 1 is at the rim, less than that interior to the crater, etc.
+        array of radius fraction values, such that a radius fraction value
+        of 1 is at the rim, less than that interior to the crater, etc.
 
-           A ValueError will be thrown if any values in r are < 0.
+        A ValueError will be thrown if any values in r are < 0.
 
-           The Fassett and Thomson (2014) paper defined equations which
-           placed the rim point at a radius fraction of 0.98, but that
-           results in a crater with a smaller diameter than specifed.
-           If radius_fix is True (the default) the returned profile will
-           extend the interior slope and place the rim at radius fraction
-           1.0, but this may cause a discontinuity at the rim.  If you
-           would like a profile with the original behavior, set radius_fix
-           to False.
+        The Fassett and Thomson (2014) paper defined equations which
+        placed the rim point at a radius fraction of 0.98, but that
+        results in a crater with a smaller diameter than specifed.
+        If radius_fix is True (the default) the returned profile will
+        extend the interior slope and place the rim at radius fraction
+        1.0, but this may cause a discontinuity at the rim.  If you
+        would like a profile with the original behavior, set radius_fix
+        to False.
         """
 
         if not isinstance(r, np.ndarray):
@@ -82,9 +90,7 @@ class FT_Crater(Crater):
         out_arr = np.zeros_like(r)
 
         if np.any(r < 0):
-            raise ValueError(
-                "The radius fraction value can't be less than zero."
-            )
+            raise ValueError("The radius fraction value can't be less than zero.")
 
         # In F&T (2014) the boundary between inner and outer was at 0.98
         # which put the rim not at r=1, Caleb's subsequent code revised
@@ -98,12 +104,8 @@ class FT_Crater(Crater):
         inner_idx = np.logical_and(0.2 < r, r <= rim)
         outer_idx = np.logical_and(rim < r, r <= 1.5)
 
-        inner_poly = Polynomial(
-            [-0.228809953, 0.227533882, 0.083116795, -0.039499407]
-        )
-        outer_poly = Polynomial(
-            [0.188253307, -0.187050452, 0.01844746, 0.01505647]
-        )
+        inner_poly = Polynomial([-0.228809953, 0.227533882, 0.083116795, -0.039499407])
+        outer_poly = Polynomial([0.188253307, -0.187050452, 0.01844746, 0.01505647])
 
         out_arr[flat_idx] = self.diameter * -0.181
         out_arr[inner_idx] = self.diameter * inner_poly(r[inner_idx])
@@ -134,11 +136,7 @@ class FTmod_Crater(Crater):
     thus shallower, thus larger (relative) flat floors.
     """
 
-    def __init__(
-        self,
-        diameter,
-        depth=None
-    ):
+    def __init__(self, diameter, depth=None):
         super().__init__(diameter)
         if depth is None:
             self.depth = stopar_fresh_dd(self.diameter) * self.diameter
@@ -147,10 +145,10 @@ class FTmod_Crater(Crater):
 
     def profile(self, r):
         """Returns a numpy array of elevation values based in the input numpy
-           array of radius fraction values, such that a radius fraction value
-           of 1 is at the rim, less than that interior to the crater, etc.
+        array of radius fraction values, such that a radius fraction value
+        of 1 is at the rim, less than that interior to the crater, etc.
 
-           A ValueError will be thrown if any values in r are < 0.
+        A ValueError will be thrown if any values in r are < 0.
         """
 
         if not isinstance(r, np.ndarray):
@@ -159,20 +157,14 @@ class FTmod_Crater(Crater):
         out_arr = np.zeros_like(r)
 
         if np.any(r < 0):
-            raise ValueError(
-                "The radius fraction value can't be less than zero."
-            )
+            raise ValueError("The radius fraction value can't be less than zero.")
 
         inner_idx = np.logical_and(0 <= r, r <= 0.98)
         rim_idx = np.logical_and(0.98 < r, r <= 1.02)
         outer_idx = np.logical_and(1.02 < r, r <= 1.5)
 
-        inner_poly = Polynomial(
-            [-0.228809953, 0.227533882, 0.083116795, -0.039499407]
-        )
-        outer_poly = Polynomial(
-            [0.188253307, -0.187050452, 0.01844746, 0.01505647]
-        )
+        inner_poly = Polynomial([-0.228809953, 0.227533882, 0.083116795, -0.039499407])
+        outer_poly = Polynomial([0.188253307, -0.187050452, 0.01844746, 0.01505647])
 
         rim_hoverd = 0.036822095
 
@@ -188,14 +180,14 @@ class FTmod_Crater(Crater):
 
 class MPD_Crater(Crater):
     """A crater whose profile is defined by functions described in
-       Martin, Parkes, and Dunstan (2014,
-       https:doi.org/10.1109/TAES.2014.120282).  The published equations
-       for beta and h3 result in non-realistic profiles.  For this class,
-       the definition of beta has been adjusted so that it is a positive value
-       (which we think was intended).  We have also replaced the published
-       function for h3, with a cubic that actually matches up with h2 and h4,
-       although the matching with h4 is imperfect, so there is likely a better
-       representation for h3.
+    Martin, Parkes, and Dunstan (2014,
+    https:doi.org/10.1109/TAES.2014.120282).  The published equations
+    for beta and h3 result in non-realistic profiles.  For this class,
+    the definition of beta has been adjusted so that it is a positive value
+    (which we think was intended).  We have also replaced the published
+    function for h3, with a cubic that actually matches up with h2 and h4,
+    although the matching with h4 is imperfect, so there is likely a better
+    representation for h3.
     """
 
     def __init__(
@@ -205,7 +197,7 @@ class MPD_Crater(Crater):
         rim_height=None,
         emin=0,  # height of the ejecta at x = D/2
         pre_rim_elevation=0,
-        plane_elevation=0
+        plane_elevation=0,
     ):
         self.h0 = self.height_naught(diameter)
         self.hr0 = self.height_r_naught(diameter)
@@ -245,25 +237,29 @@ class MPD_Crater(Crater):
         if -1 <= x <= alpha:
             return self.h1(x, self.hr, self.h, self.hr0)
 
-        elif alpha <= x <= 0:
-            return self.h2(
-                x, self.hr, self.h, self.hr0, alpha, self.tr, self.pr
-            )
-        elif 0 <= x <= beta:
+        if alpha <= x <= 0:
+            return self.h2(x, self.hr, self.h, self.hr0, alpha, self.tr, self.pr)
+
+        if 0 <= x <= beta:
             # return self.h3(
             return self.h3_alt(
-                self.diameter, self.emin,
-                x, self.hr, self.h, self.hr0, alpha, beta,
-                self.tr, self.pr
-            )
-        elif beta <= x:
-            return self.h4(
-                x, self.diameter, self.fc(x, self.emin, self.tr, self.pr)
+                self.diameter,
+                self.emin,
+                x,
+                self.hr,
+                self.h,
+                self.hr0,
+                alpha,
+                beta,
+                self.tr,
+                self.pr,
             )
 
-        else:
-            # Really should not be able to get here.
-            raise ValueError(err_msg)
+        if beta <= x:
+            return self.h4(x, self.diameter, self.fc(x, self.emin, self.tr, self.pr))
+
+        # Really should not be able to get here.
+        raise ValueError(err_msg)
 
     @staticmethod
     def height_naught(diameter: float):
@@ -279,16 +275,13 @@ class MPD_Crater(Crater):
     @staticmethod
     def h1(x: float, hr: float, h: float, hr_naught: float):
         """Eqn 4 in Martin, Parkes, and Dunstan."""
-        h_ = (hr_naught - hr + h)
+        h_ = hr_naught - hr + h
         return (h_ * math.pow(x, 2)) + (2 * h_ * x) + hr_naught
 
     @staticmethod
-    def h2(
-        x: float, hr: float, h: float, hr_naught: float, alpha: float,
-        tr=0, pr=0
-    ):
+    def h2(x: float, hr: float, h: float, hr_naught: float, alpha: float, tr=0, pr=0):
         """Eqn 5 in Martin, Parkes, and Dunstan."""
-        h_ = (hr_naught - hr + h)
+        h_ = hr_naught - hr + h
         return ((h_ * (alpha + 1)) / alpha) * math.pow(x, 2) + hr + tr - pr
 
     @staticmethod
@@ -299,20 +292,33 @@ class MPD_Crater(Crater):
 
     @staticmethod
     def h3(
-        x: float, hr: float, h: float, hr_naught: float,
-        alpha: float, beta: float, tr=0, pr=0
+        x: float,
+        hr: float,
+        h: float,
+        hr_naught: float,
+        alpha: float,
+        beta: float,
+        tr=0,
+        pr=0,
     ):
         """Eqn 7 in Martin, Parkes, and Dunstan."""
-        h_ = (hr_naught - hr + h)
+        h_ = hr_naught - hr + h
         t1 = -1 * ((2 * h_) / (3 * math.pow(beta, 2))) * math.pow(x, 3)
         t2 = (h_ + ((2 * h_) / beta)) * math.pow(x, 2)
         return t1 + t2 + hr + tr - pr
 
     @staticmethod
     def h3_alt(
-        diameter, emin,
-        x: float, hr: float, h: float, hr_naught: float,
-        alpha: float, beta: float, tr=0, pr=0
+        diameter,
+        emin,
+        x: float,
+        hr: float,
+        h: float,
+        hr_naught: float,
+        alpha: float,
+        beta: float,
+        tr=0,
+        pr=0,
     ):
         """Improved cubic form."""
         # ax^3 + bx ^ 2 + cx + d = elevation
@@ -321,9 +327,7 @@ class MPD_Crater(Crater):
         # implies that c = 0.
         # The inflection point should be where this function meets up
         # with h4, so that means that the inflection point is at x = beta
-        h4_at_beta = MPD_Crater.h4(
-            beta, diameter, MPD_Crater.fc(beta, emin, tr, pr)
-        )
+        h4_at_beta = MPD_Crater.h4(beta, diameter, MPD_Crater.fc(beta, emin, tr, pr))
         a = (hr - h4_at_beta) / (2 * math.pow(beta, 3))
         b = -3 * a * beta
         cubic = Polynomial([hr, 0, b, a])
@@ -332,7 +336,7 @@ class MPD_Crater(Crater):
     @staticmethod
     def beta(hr: float, h: float, hr_naught: float, tr=0, pr=0):
         """Eqn 8 in Martin, Parkes, and Dunstan."""
-        h_ = (hr_naught - hr + h)
+        h_ = hr_naught - hr + h
         # This changes the order of hr_naught and hr from the
         # paper, as this ensures that this term will be positive.
         return (3 * (hr_naught - hr + tr - pr)) / (2 * h_)

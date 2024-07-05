@@ -1,12 +1,20 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """This module has tests for the util module."""
 
-# Copyright 2022, synthterrain developers.
+# Copyright © 2024, United States Government, as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All rights reserved.
 #
-# Reuse is permitted under the terms of the license.
-# The AUTHORS file and the LICENSE file are at the
-# top level of this library.
+# The “synthterrain” software is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License
+# at http://www.apache.org/licenses/LICENSE-2.0.
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 import argparse
 import logging
@@ -17,7 +25,6 @@ import synthterrain.util as util
 
 
 class TestUtil(unittest.TestCase):
-
     def test_FileArgumentParser(self):
         p = util.FileArgumentParser()
 
@@ -41,12 +48,7 @@ class TestUtil(unittest.TestCase):
         a("dummy", "dummy", "dummy")
         self.assertEqual(
             m_print.call_args_list,
-            [
-                call("a"),
-                call("   a value"),
-                call("b"),
-                call("   b value")
-            ]
+            [call("a"), call("   a value"), call("b"), call("   b value")],
         )
         m_exit.assert_called_once()
 

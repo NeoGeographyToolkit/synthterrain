@@ -56,8 +56,17 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 	rm -fr test-resources
 
-lint: ## check style with flake8
-	flake8 --max-complexity 10 --ignore E203,E501,W503 hiproc tests
+lint/flake8: ## check style with flake8
+	flake8 src/python/synthterrain tests/python/
+
+lint/black: ## check style with black
+	black --check src/python/synthterrain tests
+
+lint/ufmt: ## check format with ufmt
+	ufmt check src/python/synthterrain
+	ufmt check tests/python
+
+lint: lint/flake8 lint/black lint/ufmt
 
 test: ## run tests quickly with the default Python
 	pytest -s
@@ -82,13 +91,18 @@ coverage: ## check code coverage quickly with the default Python
 # servedocs: docs ## compile the docs watching for changes
 # 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
 
+release-check: dist ## check state of distribution
+	twine check dist/*
+
 release: dist ## package and upload a release
 	twine upload dist/*
 
 dist: clean ## builds source and wheel package
-	python setup.py sdist
-	python setup.py bdist_wheel
+	python -m build
 	ls -l dist
 
+develop: clean  ## install the package in an editable format for development
+	pip install --no-deps -e .
+
 install: clean ## install the package to the active Python's site-packages
-	python setup.py install
+	pip install

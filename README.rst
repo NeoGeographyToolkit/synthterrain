@@ -17,7 +17,7 @@ Features
 --------
 
 The synthterrain package currently offers these command-line programs
-when it is installed (see the CONTRIBUTING document).  Arguments
+when it is installed (see below).  Arguments
 can be found by running any program with a ``-h`` flag.
 
 ``synthcraters``
@@ -33,10 +33,10 @@ can be found by running any program with a ``-h`` flag.
     ``synthrocks``.  Also allows a set of pre-existing craters to be added
     to the probabiliy maps that ``synthrocks`` uses to place rocks.
 
-``craterconvert``
+``synthcraterconvert``
     Converts between the current crater CSV and old XML MATLAB formats.
 
-``craterplot``
+``synthcraterplot``
     Generates a set of plots from the CSV output of ``synthcraters``.
 
 
@@ -63,11 +63,64 @@ And then you could call ``synthterrain`` like this::
 You can mix regular arguments and ampersand-arguments if you wish.
 
 
+Installation
+------------
+
+Clone or download this repository.
+
+It is highly suggested to install this into a virtual Python environment.
+
+Change directory to where you have downloaded this repository after you have
+set up your virtual environment, just do this::
+
+$> pip install
+
+
+or::
+
+$> make install
+
+If you use conda for your virtual environment, you can do this::
+
+$> conda create -n synthterrain
+$> conda activate synthterrain
+$> conda env update --file environment.yml
+
+
+
 Contributing
 ------------
 
 Feedback, issues, and contributions are always gratefully welcomed. See the
 contributing guide for details on how to help and setup a development
 environment.
+
+
+Credits
+-------
+
+synthterrain was developed in the open at NASA's Ames Research Center.
+
+See the `AUTHORS <https://github.com/NeoGeographyToolkit/syntheterrain/blob/master/AUTHORS.rst>`
+file for a complete list of developers.
+
+
+License
+-------
+Copyright © 2024, United States Government, as represented by the
+Administrator of the National Aeronautics and Space Administration.
+All rights reserved.
+
+The "synthterrain" software is licensed under the Apache License,
+Version 2.0 (the "License"); you may not use this file except in
+compliance with the License. You may obtain a copy of the License
+at http://www.apache.org/licenses/LICENSE-2.0.
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+implied. See the License for the specific language governing
+permissions and limitations under the License.
+
 
 

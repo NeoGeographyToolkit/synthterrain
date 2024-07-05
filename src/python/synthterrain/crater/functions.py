@@ -1,17 +1,27 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """This module contains abstract and concrete classes for representing
 crater size-frequency distributions as probability distributions.
 """
 
-# Copyright 2022, United States Government as represented by the
+# Copyright © 2024, United States Government, as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All rights reserved.
+#
+# The “synthterrain” software is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License
+# at http://www.apache.org/licenses/LICENSE-2.0.
 
-from abc import ABC, abstractmethod
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
+
 import copy
 import logging
 import math
+from abc import ABC, abstractmethod
 from numbers import Number
 
 import numpy as np
@@ -27,52 +37,51 @@ logger = logging.getLogger(__name__)
 
 class Crater_rv_continuous(ABC, rv_continuous):
     """Base class for crater continuous distributions.  Provides
-       some convenience functions common to all crater distributions.
+    some convenience functions common to all crater distributions.
 
-       Crater distribution terminology can be reviewed in Robbins, et al. (2018,
-       https://doi.org/10.1111/maps.12990), which in its
-       terminology section states "In crater work, the CSFD can be thought
-       of as a scaled version of "1−CDF."
+    Crater distribution terminology can be reviewed in Robbins, et al. (2018,
+    https://doi.org/10.1111/maps.12990), which in its
+    terminology section states "In crater work, the CSFD can be thought
+    of as a scaled version of "1−CDF."
 
-       CSFD is the crater size-frequency distribution, a widely used
-       representation in the scientific literature.  CDF is the statistical
-       cumulative distribution function.
+    CSFD is the crater size-frequency distribution, a widely used
+    representation in the scientific literature.  CDF is the statistical
+    cumulative distribution function.
 
-       Both the CSFD and the CDF are functions of d (the diameter of craters),
-       and are related thusly, according to Robbins et al.:
+    Both the CSFD and the CDF are functions of d (the diameter of craters),
+    and are related thusly, according to Robbins et al.:
 
-           CSFD(d) ~ 1 - CDF(d)
+        CSFD(d) ~ 1 - CDF(d)
 
-       For any particular count of craters, the smallest crater value
-       measured (d_min) gives the total number of craters in the set per
-       unit area, CSFD(d_min).  Which implies this relation
+    For any particular count of craters, the smallest crater value
+    measured (d_min) gives the total number of craters in the set per
+    unit area, CSFD(d_min).  Which implies this relation
 
-           CDF(d) = 1 - (CSFD(d) / CSFD(d_min))
+        CDF(d) = 1 - (CSFD(d) / CSFD(d_min))
 
-       If you scale by CSFC(d_min) which is the total number of craters,
-       then you get a statistical CDF.
+    If you scale by CSFC(d_min) which is the total number of craters,
+    then you get a statistical CDF.
 
-       When creating concrete classes that descend from Crater_rv_continuous,
-       the csfd() function must be implemented.  There is a default
-       implementation of ._cdf(), but it is advised that it be implemented
-       directly for speed and efficiency.  It is also heavily advised
-       (echoing the advice from scipy.stats.rv_continuous itself) that _ppf()
-       also be directly implemented.
+    When creating concrete classes that descend from Crater_rv_continuous,
+    the csfd() function must be implemented.  There is a default
+    implementation of ._cdf(), but it is advised that it be implemented
+    directly for speed and efficiency.  It is also heavily advised
+    (echoing the advice from scipy.stats.rv_continuous itself) that _ppf()
+    also be directly implemented.
 
-       It is assumed that the units of diameters (d) are in meters, and
-       that the resulting CSFD(d) is in units of number per square meter.
-       Implementing functions should support this.
+    It is assumed that the units of diameters (d) are in meters, and
+    that the resulting CSFD(d) is in units of number per square meter.
+    Implementing functions should support this.
     """
 
     def __init__(self, a, **kwargs):
         if a <= 0:
             raise ValueError(
-                "The lower bound of the support of the distribution, a, must "
-                "be > 0."
+                "The lower bound of the support of the distribution, a, must be > 0."
             )
-        else:
-            kwargs["a"] = a
-            super().__init__(**kwargs)
+
+        kwargs["a"] = a
+        super().__init__(**kwargs)
 
     @abstractmethod
     def csfd(self, d):
@@ -109,22 +118,24 @@ class Crater_rv_continuous(ABC, rv_continuous):
 
     def _cdf(self, d):
         """Returns an array-like which is the result of applying the
-           cumulative density function to *d*, the input array-like of
-           diameters.
+        cumulative density function to *d*, the input array-like of
+        diameters.
 
-           If the crater size-frequency distribution (CSFD) is C(d) (typically
-           also expressed as N_cumulative(d) ), then
+        If the crater size-frequency distribution (CSFD) is C(d) (typically
+        also expressed as N_cumulative(d) ), then
 
-               cdf(d) = 1 - (C(d) / C(d_min))
+            cdf(d) = 1 - (C(d) / C(d_min))
 
-           In the context of this class, d_min is a, the lower bound of the
-           support of the distribution when this class is instantiated.
+        In the context of this class, d_min is a, the lower bound of the
+        support of the distribution when this class is instantiated.
 
-           As with the parent class, rv_continuous, implementers of derived
-           classes are strongly encouraged to override this with more
-           efficient implementations, also possibly implementing _ppf().
+        As with the parent class, rv_continuous, implementers of derived
+        classes are strongly encouraged to override this with more
+        efficient implementations, also possibly implementing _ppf().
         """
-        return np.ones_like(d, dtype=np.dtype(float)) - (self.csfd(d) / self.csfd(self.a))
+        return np.ones_like(d, dtype=np.dtype(float)) - (
+            self.csfd(d) / self.csfd(self.a)
+        )
 
     def count(self, area, diameter=None) -> int:
         """Returns the number of craters based on the *area* provided
@@ -142,21 +153,21 @@ class Crater_rv_continuous(ABC, rv_continuous):
 
     def rvs(self, *args, **kwargs):
         """Overrides the parent rvs() function by adding an *area*
-           parameter, all other arguments are identical.
+        parameter, all other arguments are identical.
 
-           If an *area* parameter is provided, it is interpreted as the
-           area in square meters which has accumulated craters.
+        If an *area* parameter is provided, it is interpreted as the
+        area in square meters which has accumulated craters.
 
-           Specifying it will cause the *size* parameter (if given) to
-           be overridden such that
+        Specifying it will cause the *size* parameter (if given) to
+        be overridden such that
 
-                size = CSDF(d_min) * area
+             size = CSDF(d_min) * area
 
-           and then the parent rvs() function will be called.
+        and then the parent rvs() function will be called.
 
-           Since the CSDF interpreted at the minimum crater size is
-           the total number of craters per square meter, multiplying
-           it by the desired area results in the desired number of craters.
+        Since the CSDF interpreted at the minimum crater size is
+        the total number of craters per square meter, multiplying
+        it by the desired area results in the desired number of craters.
         """
         if "area" in kwargs:
             kwargs["size"] = self.count(kwargs["area"])
@@ -166,19 +177,18 @@ class Crater_rv_continuous(ABC, rv_continuous):
 
 
 class Test_Distribution(Crater_rv_continuous):
-    """This is testing a simple function.
-    """
+    """This is testing a simple function."""
 
     def csfd(self, d):
         """Returns the crater cumulative size frequency distribution function
-           such that
-                CSFD(d) = N_cum(d) = 29174 / d^(1.92)
+        such that
+             CSFD(d) = N_cum(d) = 29174 / d^(1.92)
         """
         return 29174 * np.float_power(d, -1.92)
 
     def _cdf(self, d):
         """Override of parent function to eliminate unnecessary division
-           of 29174 by itself.
+        of 29174 by itself.
         """
         return np.ones_like(d, dtype=np.dtype(float)) - (
             np.float_power(d, -1.92) / np.float_power(self.a, -1.92)
@@ -198,13 +208,17 @@ class VIPER_Env_Spec(Crater_rv_continuous):
 
     def csfd(self, d):
         """
-            CSFD( d <= 80 ) = (29174 / d^(1.92)) / (1000^2)
-            CSFD( d > 80 ) = (156228 / d^(2.389)) / (1000^2)
+        CSFD( d <= 80 ) = (29174 / d^(1.92)) / (1000^2)
+        CSFD( d > 80 ) = (156228 / d^(2.389)) / (1000^2)
 
         """
         if isinstance(d, Number):
             # Convert to numpy array, if needed.
-            diam = np.array([d, ])
+            diam = np.array(
+                [
+                    d,
+                ]
+            )
         else:
             diam = d
         c = np.empty_like(diam, dtype=np.dtype(float))
@@ -213,8 +227,8 @@ class VIPER_Env_Spec(Crater_rv_continuous):
         out = c / (1000 * 1000)
         if isinstance(d, Number):
             return out.item()
-        else:
-            return out
+
+        return out
 
     # See comment on commented out parent isfd() function.
     # def isfd(self, d):
@@ -231,7 +245,7 @@ class VIPER_Env_Spec(Crater_rv_continuous):
 
     def _cdf(self, d):
         """Override parent function to eliminate unnecessary division
-           by constants.
+        by constants.
         """
         c = np.empty_like(d, dtype=np.dtype(float))
         c[d <= 80] = np.float_power(d[d <= 80], -1.92) / np.float_power(self.a, -1.92)
@@ -240,16 +254,22 @@ class VIPER_Env_Spec(Crater_rv_continuous):
 
     def _ppf(self, q):
         """Override parent function to make things faster for .rvs()."""
-        q80 = float(self._cdf(np.array([80, ])))
+        q80 = float(
+            self._cdf(
+                np.array(
+                    [
+                        80,
+                    ]
+                )
+            )
+        )
         ones = np.ones_like(q, dtype=np.dtype(float))
         p = np.empty_like(q, dtype=np.dtype(float))
         p[q <= q80] = np.float_power(
-            (ones[q <= q80] / (ones[q <= q80] - q[q <= q80])),
-            (1 / 1.92)
+            (ones[q <= q80] / (ones[q <= q80] - q[q <= q80])), (1 / 1.92)
         )
         p[q > q80] = np.float_power(
-            (ones[q > q80] / (ones[q > q80] - q[q > q80])),
-            (1 / 2.389)
+            (ones[q > q80] / (ones[q > q80] - q[q > q80])), (1 / 2.389)
         )
 
         return self.a * p
@@ -314,15 +334,15 @@ class Trask(Crater_rv_continuous):
 
 class Coef_Distribution(Crater_rv_continuous):
     """This class instantiates a continuous crater distribution based
-       on a polynomial.  This notation for a crater distribution is
-       used by Neukum et al. (2001, https://doi.org/10.1023/A:1011989004263)
-       and in the craterstats package.
+    on a polynomial.  This notation for a crater distribution is
+    used by Neukum et al. (2001, https://doi.org/10.1023/A:1011989004263)
+    and in the craterstats package.
 
-       The coefficients generally assume that the diameter values are in
-       kilometers, and the math here is based on that, but only matters for
-       the specification of the coefficients.  The diameter values passed
-       to csfd() are expected to be in meters, and the returned value
-       is number per square meter.
+    The coefficients generally assume that the diameter values are in
+    kilometers, and the math here is based on that, but only matters for
+    the specification of the coefficients.  The diameter values passed
+    to csfd() are expected to be in meters, and the returned value
+    is number per square meter.
     """
 
     def __init__(self, *args, coef=None, poly=None, **kwargs):
@@ -342,19 +362,19 @@ class Coef_Distribution(Crater_rv_continuous):
 
     def csfd(self, d):
         """Returns the crater cumulative size frequency distribution function
-           such that
-                CSFD(d) = N_cum(d) = 10^x / (1000 * 1000)
+        such that
+             CSFD(d) = N_cum(d) = 10^x / (1000 * 1000)
 
-           where x is the summation of j from zero to n (typically ~ 11) of
-                a_j * ( lg(d/1000) )^j
+        where x is the summation of j from zero to n (typically ~ 11) of
+             a_j * ( lg(d/1000) )^j
 
-           where lg() is the base 10 logarithm, and the values a_j are the
-           coefficients provided via the constructor.
+        where lg() is the base 10 logarithm, and the values a_j are the
+        coefficients provided via the constructor.
 
-           Since published coefficients are typically provided for diameter
-           values in kilometers and areas in square kilometers, the equation
-           for CSFD(d) is adjusted so that diameters can be provided in units
-           of meters, and CSFD(d) is returned in counts per square meter.
+        Since published coefficients are typically provided for diameter
+        values in kilometers and areas in square kilometers, the equation
+        for CSFD(d) is adjusted so that diameters can be provided in units
+        of meters, and CSFD(d) is returned in counts per square meter.
         """
         # The 1000s are to take diameters in meters, convert to kilometers
         # for application by the polynomial, and then division by a square
@@ -430,8 +450,7 @@ class Coef_Distribution(Crater_rv_continuous):
     def _cdf(self, d):
         """Override parent function to speed up."""
         return np.ones_like(d, dtype=np.dtype(float)) - np.float_power(
-            10,
-            self.poly(np.log10(d / 1000)) - self.poly(np.log10(self.a / 1000))
+            10, self.poly(np.log10(d / 1000)) - self.poly(np.log10(self.a / 1000))
         )
 
 
@@ -454,7 +473,6 @@ class NPF(Coef_Distribution):
     """
 
     def __init__(self, a, b, **kwargs):
-
         if a < 10:
             raise ValueError(
                 "The lower bound of the support of the distribution, a, must "
@@ -470,20 +488,31 @@ class NPF(Coef_Distribution):
         kwargs["b"] = b
         super().__init__(
             coef=[
-                -3.0768, -3.557528, 0.781027, 1.021521, -0.156012, -0.444058,
-                0.019977, 0.086850, -0.005874, -0.006809, 8.25e-04, 5.54e-05
+                -3.076756,
+                # -3.0768,
+                -3.557528,
+                0.781027,
+                1.021521,
+                -0.156012,
+                -0.444058,
+                0.019977,
+                0.086850,
+                -0.005874,
+                -0.006809,
+                8.25e-04,
+                5.54e-05,
             ],
-            **kwargs
+            **kwargs,
         )
 
 
 class Interp_Distribution(Crater_rv_continuous):
     """This class instantiates a continuous crater distribution based
-       on interpolation of a set of data points.
+    on interpolation of a set of data points.
 
-       The input arrays assume that the diameter values are in meters
-       and the cumulative size frequency distribution values are in
-       counts per square meter.
+    The input arrays assume that the diameter values are in meters
+    and the cumulative size frequency distribution values are in
+    counts per square meter.
     """
 
     def __init__(self, *args, diameters=None, csfds=None, func=None, **kwargs):
@@ -504,15 +533,14 @@ class Interp_Distribution(Crater_rv_continuous):
 
     def csfd(self, d):
         """Returns the crater cumulative size frequency distribution function
-           value for *d*.
+        value for *d*.
         """
         return np.float_power(10, self.func(np.log10(d)))
 
     def _cdf(self, d):
         """Override parent function to speed up."""
         return np.ones_like(d, dtype=np.dtype(float)) - np.float_power(
-            10,
-            self.func(np.log10(d)) - self.func(np.log10(self.a))
+            10, self.func(np.log10(d)) - self.func(np.log10(self.a))
         )
 
 
@@ -579,7 +607,7 @@ class Grun(Interp_Distribution):
         # Constants indicated below equation A2 from Grun et al. (1985)
         # First element here is arbitrarily zero so that indexes match
         # with printed A2 equation for easier comparison.
-        c = (0, 4e+29, 1.5e+44, 1.1e-2, 2.2e+3, 15.)
+        c = (0, 4e29, 1.5e44, 1.1e-2, 2.2e3, 15.0)
         gamma = (0, 1.85, 3.7, -0.52, 0.306, -4.38)
 
         def a_elem(mass, i):
@@ -587,12 +615,9 @@ class Grun(Interp_Distribution):
 
         def a2(mass):
             # Returns flux in m^-2 s^-1
-            return (
-                np.float_power(
-                    a_elem(mass, 1) + a_elem(mass, 2) + c[3], gamma[3]
-                ) +
-                np.float_power(a_elem(mass, 4) + c[5], gamma[5])
-            )
+            return np.float_power(
+                a_elem(mass, 1) + a_elem(mass, 2) + c[3], gamma[3]
+            ) + np.float_power(a_elem(mass, 4) + c[5], gamma[5])
 
         # fluxes = a2(masses) * 86400.0 * 365.25  # convert to m^-2 yr^-1
         # fluxes = a2(masses) * 86400.0 * 365.25 * 1e6  # convert to km^-2 yr^-1
@@ -607,10 +632,9 @@ class Grun(Interp_Distribution):
         #
         #   r = [ (3 * m) / (4 * pi * rho) ] ^(1/3)
         #
-        rho = 2.5e+6  # g/m^-3
+        rho = 2.5e6  # g/m^-3
         radii = np.float_power(
-            (3 * masses) / (4 * math.pi * rho),
-            1 / 3
+            (3 * masses) / (4 * math.pi * rho), 1 / 3
         )  # should be radii in meters.
 
         # Now these "impactor" radii need to be converted to crater size via
@@ -645,7 +669,7 @@ class Grun(Interp_Distribution):
         mu=0.43,  # ~0.4 to 0.55
         K1=0.132,
         K2=0.26,
-        Kr=(1.1 * 1.3)  # Kr and KrRim
+        Kr=(1.1 * 1.3),  # Kr and KrRim
     ):
         # This function is adapted from Caleb's research code, but is based
         # on Holsapple (1993,
@@ -655,7 +679,7 @@ class Grun(Interp_Distribution):
         # and a discontinuity with Neukum
 
         effvelocity = velocity * math.sin(math.radians(alpha))
-        densityratio = (targdensity / rho)
+        densityratio = targdensity / rho
 
         # impmass=((4.0*math.pi)/3.0)*impdensity*(impradius**3.0)  #impactormass
         pi2 = (gravity * radii) / math.pow(effvelocity, 2.0)
@@ -667,12 +691,9 @@ class Grun(Interp_Distribution):
         expthree = (2.0 + mu) / 2.0
         expfour = (-3.0 * mu) / (2.0 + mu)
         piV = K1 * np.float_power(
-            (pi2 * np.float_power(densityratio, expone)) +
-            np.float_power(
-                K2 * pi3 * np.float_power(densityratio, exptwo),
-                expthree
-            ),
-            expfour
+            (pi2 * np.float_power(densityratio, expone))
+            + np.float_power(K2 * pi3 * np.float_power(densityratio, exptwo), expthree),
+            expfour,
         )
         V = (masses * piV) / targdensity  # m3 for crater
         rim_radius = Kr * np.float_power(V, (1 / 3))
@@ -703,8 +724,7 @@ class GNPF_old(NPF):
             self.interp = interp
         else:
             raise ValueError(
-                f"The interpolation method, {interp} "
-                f"is not one of {interp_types}."
+                f"The interpolation method, {interp} " f"is not one of {interp_types}."
             )
 
         # Will now construct *this* as an NPF with a Grun hidden inside.
@@ -729,9 +749,7 @@ class GNPF_old(NPF):
             diameters = np.append(grun_d, n_diams)
             fluxes = np.append(grun_f, n_fluxes)
 
-            p = Polynomial.fit(
-                np.log10(diameters / 1000), np.log10(fluxes * 1e6), 11
-            )
+            p = Polynomial.fit(np.log10(diameters / 1000), np.log10(fluxes * 1e6), 11)
 
             self.grun = Coef_Distribution(poly=p, **grun_kwargs)
         elif self.interp == "interp":
@@ -754,7 +772,11 @@ class GNPF_old(NPF):
     def csfd(self, d):
         if isinstance(d, Number):
             # Convert to numpy array, if needed.
-            diam = np.array([float(d), ])
+            diam = np.array(
+                [
+                    float(d),
+                ]
+            )
         else:
             diam = d
         c = np.empty_like(diam, dtype=np.dtype(float))
@@ -765,9 +787,7 @@ class GNPF_old(NPF):
             c[diam < 10] = self.grun.csfd(diam[diam < 10])
         elif self.interp == "linear":
             d_interp = np.log10((self.grunstop, 10))
-            c_interp = np.log10((
-                self.grun.csfd(self.grunstop), super().csfd(10)
-            ))
+            c_interp = np.log10((self.grun.csfd(self.grunstop), super().csfd(10)))
             # cs = CubicSpline(d_interp, c_interp)
             f = interp1d(d_interp, c_interp)
 
@@ -790,8 +810,8 @@ class GNPF_old(NPF):
 
         if isinstance(d, Number):
             return c.item()
-        else:
-            return c
+
+        return c
 
     # def isfd(self, d):
     #     if isinstance(d, Number):
@@ -805,7 +825,11 @@ class GNPF_old(NPF):
     def _cdf(self, d):
         if isinstance(d, Number):
             # Convert to numpy array, if needed.
-            diam = np.array([d, ])
+            diam = np.array(
+                [
+                    d,
+                ]
+            )
         else:
             diam = d
         c = np.empty_like(diam, dtype=np.dtype(float))
@@ -815,9 +839,7 @@ class GNPF_old(NPF):
             c[diam < 10] = self.grun._cdf(diam[diam < 10])
         elif self.interp == "linear":
             d_interp = np.log10((self.grunstop, 10))
-            c_interp = np.log10((
-                self.grun._cdf(self.grunstop), super()._cdf(10)
-            ))
+            c_interp = np.log10((self.grun._cdf(self.grunstop), super()._cdf(10)))
             # cs = CubicSpline(d_interp, c_interp)
             f = interp1d(d_interp, c_interp)
 
@@ -835,8 +857,8 @@ class GNPF_old(NPF):
 
         if isinstance(d, Number):
             return c.item()
-        else:
-            return c
+
+        return c
 
 
 class GNPF(NPF):
@@ -878,12 +900,14 @@ class GNPF(NPF):
         grun_kwargs["csfds"] = fluxes
         self.grun = Interp_Distribution(**grun_kwargs)
 
-        return
-
     def csfd(self, d):
         if isinstance(d, Number):
             # Convert to numpy array, if needed.
-            diam = np.array([float(d), ])
+            diam = np.array(
+                [
+                    float(d),
+                ]
+            )
         else:
             diam = d
         c = np.empty_like(diam, dtype=np.dtype(float))
@@ -893,13 +917,17 @@ class GNPF(NPF):
 
         if isinstance(d, Number):
             return c.item()
-        else:
-            return c
+
+        return c
 
     def _cdf(self, d):
         if isinstance(d, Number):
             # Convert to numpy array, if needed.
-            diam = np.array([d, ])
+            diam = np.array(
+                [
+                    d,
+                ]
+            )
         else:
             diam = d
         c = np.empty_like(diam, dtype=np.dtype(float))
@@ -959,16 +987,11 @@ class GNPF_fit(Coef_Distribution):
         # print(np.log10(fluxes))
         # np.set_printoptions(threshold=False)
 
-        p = Polynomial.fit(
-            np.log10(diameters), np.log10(fluxes), 11
-        )
+        p = Polynomial.fit(np.log10(diameters), np.log10(fluxes), 11)
 
         kwargs["a"] = a
         kwargs["b"] = b
-        super().__init__(
-            poly=p,
-            **kwargs
-        )
+        super().__init__(poly=p, **kwargs)
 
 
 # If new equilibrium functions are added, add them to this list to expose them

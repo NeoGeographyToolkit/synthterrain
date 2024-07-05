@@ -1,25 +1,34 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Generates synthetic crater populations.
 """
 
-# Copyright 2022-2023, synthterrain developers.
+# Copyright © 2024, United States Government, as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All rights reserved.
 #
-# Reuse is permitted under the terms of the license.
-# The AUTHORS file and the LICENSE file are at the
-# top level of this library.
+# The “synthterrain” software is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License
+# at http://www.apache.org/licenses/LICENSE-2.0.
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 import logging
 import math
-from pathlib import Path
 import random
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Circle
-import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
-import numpy as np
-import pandas as pd
 from shapely.geometry import Point, Polygon
 
 from synthterrain.crater import functions
@@ -37,9 +46,10 @@ def synthesize(
     by_bin=True,
     min_d=None,
     max_d=None,
+    return_surfaces=False,
 ):
     """Return a pandas DataFrame which contains craters and their properties
-       synthesized from the input parameters.
+    synthesized from the input parameters.
     """
     if production_fn is None:
         production_fn = determine_production_function(crater_dist.a, crater_dist.b)
@@ -64,15 +74,6 @@ def synthesize(
         f"{math.ceil(df['age'].max()):,} years."
     )
 
-    # Generate depth to diameter ratio
-    if by_bin:
-        df = diffuse_d_over_D_by_bin(df, start_dd_mean="Stopar step")
-    else:
-        df["d/D"] = df.apply(
-            lambda crater: diffuse_d_over_D(crater["diameter"], crater["age"]),
-            axis=1,
-        )
-
     # Randomly generate positions within the polygon for the locations of
     # the craters.
     logger.info("Generating center positions.")
@@ -82,29 +83,51 @@ def synthesize(
     df["x"] = xlist
     df["y"] = ylist
 
+    # Generate depth to diameter ratio
+    if by_bin:
+        df = diffuse_d_over_D_by_bin(
+            df, start_dd_mean="Stopar step", return_surfaces=return_surfaces
+        )
+    else:
+        if return_surfaces:
+            df["surface"] = None
+            df["surface"].astype(object)
+            df["d/D", "surface"] = df.apply(
+                lambda crater: diffuse_d_over_D(
+                    crater["diameter"], crater["age"], return_surface=True
+                ),
+                axis=1,
+                result_type="expand",
+            )
+        else:
+            df["d/D"] = df.apply(
+                lambda crater: diffuse_d_over_D(crater["diameter"], crater["age"]),
+                axis=1,
+            )
+
     return df
 
 
 def determine_production_function(a: float, b: float):
     if a >= 10:
         return functions.NPF(a, b)
-    elif b <= 2.76:
+    if b <= 2.76:
         return functions.Grun(a, b)
-    else:
-        return functions.GNPF(a, b)
+
+    return functions.GNPF(a, b)
 
 
 def random_points(poly: Polygon, num_points: int):
     """Returns two lists, the first being the x coordinates, and the second
-       being the y coordinates, each *num_points* long that represent
-       random locations within the provided *poly*.
+    being the y coordinates, each *num_points* long that represent
+    random locations within the provided *poly*.
     """
     # We could have returned a list of shapely Point objects, but that's
     # not how we need the data later.
     min_x, min_y, max_x, max_y = poly.bounds
     # points = []
-    x_list = list()
-    y_list = list()
+    x_list = []
+    y_list = []
     # while len(points) < num_points:
     while len(x_list) < num_points:
         random_point = Point(
@@ -126,13 +149,11 @@ def generate_diameters(crater_dist, area, min, max):
     larger than *max* will be returned.
     """
     size = crater_dist.count(area, min) - crater_dist.count(area, max)
-    diameters = list()
+    diameters = []
 
     while len(diameters) != size:
         d = crater_dist.rvs(size=(size - len(diameters)))
-        diameters += d[
-            np.logical_and(min <= d, d <= max)
-        ].tolist()
+        diameters += d[np.logical_and(min <= d, d <= max)].tolist()
 
     return np.array(diameters)
 
@@ -177,13 +198,13 @@ def plot(df):
         cumulative=-1,
         log=True,
         bins=50,
-        histtype='stepfilled',
-        label="Craters"
+        histtype="stepfilled",
+        label="Craters",
     )
     ax_csfd.set_ylabel("Count")
     ax_csfd.yaxis.set_major_formatter(ScalarFormatter())
     ax_csfd.set_xlabel("Diameter (m)")
-    ax_csfd.legend(loc='best', frameon=False)
+    ax_csfd.legend(loc="best", frameon=False)
 
     ax_age.scatter(df["diameter"], df["age"], alpha=0.2, edgecolors="none", s=10)
     ax_age.set_xscale("log")
@@ -199,9 +220,8 @@ def plot(df):
     ax_dd.set_xlabel("Diameter (m)")
 
     patches = [
-        Circle((x_, y_), s_) for x_, y_, s_ in np.broadcast(
-            df["x"], df["y"], df["diameter"] / 2
-        )
+        Circle((x_, y_), s_)
+        for x_, y_, s_ in np.broadcast(df["x"], df["y"], df["diameter"] / 2)
     ]
     collection = PatchCollection(patches)
     collection.set_array(df["d/D"])  # Sets circle color to this data property.
@@ -211,11 +231,9 @@ def plot(df):
     fig.colorbar(collection, ax=ax_location)
 
     plt.show()
-    return
 
 
 def to_file(df: pd.DataFrame, outfile: Path, xml=False):
-
     if xml:
         # Write out the dataframe in the XML style of the old MATLAB
         # program.
@@ -244,8 +262,6 @@ def to_file(df: pd.DataFrame, outfile: Path, xml=False):
             index=False,
             columns=["x", "y", "diameter", "age", "d/D"],
         )
-
-    return
 
 
 def from_file(infile: Path):

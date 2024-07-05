@@ -3,9 +3,10 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - bump2version
-  - cookiecutter
+  - black
+  - bump-my-version
   - flake8
+  - icecream
   - ipympl
   - jupyterlab
   - pytest
@@ -14,5 +15,7 @@ dependencies:
   - sphinxcontrib
   - sphinxcontrib-apidoc
   - sphinxcontrib-autoprogram
-  - tox
   - twine
+  - pip
+  - pip:
+    - ufmt

@@ -13,5 +13,9 @@ dependencies:
   - numpy
   - pandas
   - rasterio
+  - scikit-image
   - scipy
   - shapely
+  - pip
+  - pip:
+    - opensimplex

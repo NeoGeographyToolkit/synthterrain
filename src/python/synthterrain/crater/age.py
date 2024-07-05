@@ -1,12 +1,22 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Functions for estimating crater ages.
 """
 
-# Copyright 2022-2023, United States Government as represented by the
+# Copyright © 2024, United States Government, as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All rights reserved.
+#
+# The “synthterrain” software is licensed under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License. You may obtain a copy of the License
+# at http://www.apache.org/licenses/LICENSE-2.0.
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# permissions and limitations under the License.
 
 import bisect
 import logging
@@ -47,25 +57,31 @@ def estimate_age(diameter, dd, max_age):
     d/D value by attempting to match the given d/D value to the diffusion shape
     of a crater of the given *diameter* and the *max_age* of that crater, which
     could be estimated via the equilibrium_ages() function.
+
+    This function returns estimated ages in multiples of a million years.  More
+    precision than that is not accurate for this approach.
     """
     fresh_dd = stopar_fresh_dd(diameter)
 
     if dd > fresh_dd:
         return 0
 
-    dd_rev_list = list(reversed(diffuse_d_over_D(
-        diameter,
-        max_age,
-        start_dd_adjust=fresh_dd,
-        return_steps=True
-    )))
+    dd_rev_list = list(
+        reversed(
+            diffuse_d_over_D(
+                diameter, max_age, start_dd_adjust=fresh_dd, return_steps=True
+            )
+        )
+    )
     nsteps = len(dd_rev_list)
 
     age_step = bisect.bisect_left(dd_rev_list, dd)
 
     years_per_step = max_age / nsteps
 
-    return (nsteps - age_step) * years_per_step
+    age = (nsteps - age_step) * years_per_step
+
+    return round(age / 1e6) * 1e6
 
 
 def estimate_age_by_bin(
@@ -114,14 +130,16 @@ def estimate_age_by_bin(
         )
 
     df["diameter_bin"] = pd.cut(
-        df["diameter"], bins=bin_edges, include_lowest=True,
+        df["diameter"],
+        bins=bin_edges,
+        include_lowest=True,
     )
 
     # df["equilibrium_age"] = equilibrium_ages(df["diameter"], pd_csfd, eq_csfd)
     df["age"] = 0
 
     for i, (interval, count) in enumerate(
-            df["diameter_bin"].value_counts(sort=False).items()
+        df["diameter_bin"].value_counts(sort=False).items()
     ):
         logger.info(
             f"Processing bin {i + 1}/{total_bins}, interval: {interval}, count: {count}"
@@ -137,25 +155,25 @@ def estimate_age_by_bin(
         else:
             age = 4.5e9
 
-        dd_rev_list = list(reversed(diffuse_d_over_D(
-            interval.mid,
-            age,
-            start_dd_adjust=fresh_dd,
-            return_steps=True
-        )))
+        dd_rev_list = list(
+            reversed(
+                diffuse_d_over_D(
+                    interval.mid, age, start_dd_adjust=fresh_dd, return_steps=True
+                )
+            )
+        )
         nsteps = len(dd_rev_list)
         years_per_step = age / nsteps
 
         def guess_age(dd):
             age_step = bisect.bisect_left(dd_rev_list, dd)
-            return int((nsteps - age_step) * years_per_step)
+            return round(int((nsteps - age_step) * years_per_step) / 1e6) * 1e6
 
         df.loc[df["diameter_bin"] == interval, "age"] = df.loc[
             df["diameter_bin"] == interval
-        ].apply(
-            lambda row: guess_age(row["d/D"]),
-            axis=1
-        )
+        ].apply(lambda row: guess_age(row["d/D"]), axis=1)
+
+    df["age"] = df["age"].astype("int64")
 
     logger.info("estimate_age_by_bin complete.")
 
