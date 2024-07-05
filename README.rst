@@ -2,6 +2,9 @@
 synthterrain
 ============
 
+.. image:: https://github.com/NeoGeographyToolkit/synthterrain/actions/workflows/python-test.yml/badge.svg
+        :target: https://github.com/NeoGeographyToolkit/synthterrain/actions
+
 The synthterrain package is software to support the creation of synthetic
 terrain on worlds in the solar system.
 
@@ -80,12 +83,12 @@ or::
 
 $> make install
 
-If you use conda for your virtual environment, you can do this::
+If you use conda for your virtual environment and install dependencies via conda, you can do this::
 
 $> conda create -n synthterrain
 $> conda activate synthterrain
 $> conda env update --file environment.yml
-
+$> pip install --no-deps .
 
 
 Contributing
