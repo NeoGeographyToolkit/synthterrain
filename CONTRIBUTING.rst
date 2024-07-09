@@ -18,7 +18,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/https://github.com/NeoGeographyToolkit/synthterrain/issues .
+Report bugs at https://github.com/NeoGeographyToolkit/synthterrain/issues .
 
 If you are reporting a bug, please include:
 

@@ -104,7 +104,7 @@ Credits
 
 synthterrain was developed in the open at NASA's Ames Research Center.
 
-See the `AUTHORS <https://github.com/NeoGeographyToolkit/syntheterrain/blob/master/AUTHORS.rst>`
+See the `AUTHORS <https://github.com/NeoGeographyToolkit/synthterrain/blob/master/AUTHORS.rst>`
 file for a complete list of developers.
 
 
