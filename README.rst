@@ -50,10 +50,10 @@ For example, you could write a text file ``test1.txt`` that looks like this::
 
     # This is an arguments file, lines that start with octothorpes are ignored.
     -v
-    --craters craters_5m_to_500m.csv
-    --cr_maxd 5
+    --bbox 0 200 200 0
+    --cr_maxd 30 
     --cr_mind 0.5
-    --rk_maxd 2
+    --rk_maxd 10 
     --rk_mind 0.1
     --probability_map_gsd 0.5
     --cr_outfile test_cr.csv
