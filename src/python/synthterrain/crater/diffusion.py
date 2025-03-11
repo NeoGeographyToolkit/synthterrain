@@ -35,7 +35,6 @@ import pandas as pd
 from numpy.polynomial import Polynomial
 from rasterio.transform import rowcol
 from rasterio.windows import get_data_window, intersect, Window
-from skimage.transform import rescale
 
 from synthterrain.crater.profile import FTmod_Crater, stopar_fresh_dd
 
@@ -492,6 +491,16 @@ def make_crater_field(
     generated from.
 
     """
+    try:
+        from skimage.transform import rescale
+    except ImportError as err:
+        raise ImportError(
+            "The scikit-image library is not present, so the make_crater_field() "
+            "function is not available.  In order to use it, please install the "
+            "scikit-image library.",
+            ImportWarning,
+        ) from err
+
     logger.info("make_crater_field start.")
 
     # # Establish initial height field:
