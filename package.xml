@@ -5,13 +5,13 @@
   <version>0.1.0</version>
   <description>
     The synthterrain package is software to support the creation of synthetic terrain on worlds in the solar system.
-  </description>
-  <maintainer email="ross.a.beyer@nasa.gov">Ross Beyer</maintainer>
-  <license>
-    Copyright (c) 2022 United States Government as represented by the
+
+    Copyright (c) 2024-2025 United States Government as represented by the
     Administrator of the National Aeronautics and Space Administration.
     All Rights Reserved.
-</license>
+  </description>
+  <maintainer email="ross.a.beyer@nasa.gov">Ross Beyer</maintainer>
+  <license>Apache 2.0</license>
 
   <depend>python3-shapely</depend>
   <depend>python3-matplotlib</depend>

@@ -110,7 +110,7 @@ file for a complete list of developers.
 
 License
 -------
-Copyright © 2024, United States Government, as represented by the
+Copyright © 2024-2025, United States Government, as represented by the
 Administrator of the National Aeronautics and Space Administration.
 All rights reserved.
 
