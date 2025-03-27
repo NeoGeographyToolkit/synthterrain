@@ -28,6 +28,16 @@ and the release date, in year-month-day format (see examples below).
 Unreleased
 ----------
 
+0.2.0 (2025-03-27)
+------------------
+
+Changed
+^^^^^^^
+
+- Made scikit-image an optional dependency and put in error messages if someone
+  tries to use the single function in which it is used without it being installed.
+
+
 
 0.1.0 (2024-07-05)
 ------------------
