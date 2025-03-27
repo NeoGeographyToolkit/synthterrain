@@ -41,7 +41,7 @@ optional-dependencies = {opt = {file = ["requirements-opt.txt"]}}
 package-dir = {"" = "src/python"}
 
 [tool.bumpversion]
-current_version = "0.2.0-dev"
+current_version = "0.2.0"
 parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)(?:-(?P<release>[a-z]+))?"
 serialize = ["{major}.{minor}.{patch}-{release}", "{major}.{minor}.{patch}"]
 search = "{current_version}"

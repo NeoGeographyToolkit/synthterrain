@@ -2,4 +2,4 @@
 
 __author__ = """synthterrain Developers"""
 __email__ = "Ross.A.Beyer@nasa.gov"
-__version__ = "0.2.0-dev"
+__version__ = "0.2.0"
