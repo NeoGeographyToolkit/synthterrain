@@ -1,7 +1,6 @@
 [build-system]
 requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
-
 [project]
 name = "synthterrain"
 version = "0.1.0"
@@ -64,5 +63,5 @@ optional_value = "released"
 
 [[tool.bumpversion.files]]
 filename = "src/python/synthterrain/__init__.py"
-search = "__version__ = {current_version}"
-replace = "__version__ = {new_version}"
+search = '__version__ = "{current_version}"'
+replace = '__version__ = "{new_version}"'
